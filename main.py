@@ -42,8 +42,8 @@ def camera_resectioning(C):
     U, Q = specRQ(A)
     #print(U)
     #print(Q)
-    t = np.matrix.transpose(U)*b
-    #print(t)
+    t = np.matmul(np.matrix.transpose(U), b)
+    print(t)
     #Normalize U
     U = U/U[2,2]
     #print(U)
@@ -51,7 +51,7 @@ def camera_resectioning(C):
     #print(D)
     K = U*D
     #print(K)
-    
+
     return t
 
 
