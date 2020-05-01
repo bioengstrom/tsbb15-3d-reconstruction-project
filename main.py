@@ -1,6 +1,7 @@
 import scipy.io as sio
 import scipy
 from scipy import linalg
+import scipy.cluster
 import numpy as np
 
 #input n x 3 matrix
@@ -40,19 +41,18 @@ def camera_resectioning(C):
     b = C[:,3]
 
     U, Q = specRQ(A)
-    #print(U)
-    #print(Q)
     t = np.matmul(np.matrix.transpose(U), b)
-    print(t)
-    #Normalize U
     U = U/U[2,2]
-    #print(U)
     D = np.sign(U)
-    #print(D)
     K = U*D
-    #print(K)
 
-    return t
+    if np.linalg.det(D) == 1:
+        R = np.matmul(D,Q)
+        t = np.matmul(D,t)
+    else:
+        R = np.matmul(-1*D,Q)
+        t = np.matmul(-1*D,t)
+    return K,R,t
 
 
 
@@ -61,27 +61,13 @@ Dino_36C = sio.loadmat('imgdata\dino_Ps.mat')
 Dino_36C = Dino_36C['P']
 #print(Dino_36C)
 C = np.asarray(Dino_36C.tolist())
-#print(C)
-#C = np.reshape(C, (3,4,36))
-#print(C.shape)
-C1 = C[:,:,:,0:3]
-b = C[0,0,:,3]
 
-U = np.zeros((3,3,C1.shape[1]))
-Q = np.zeros((3,3,C1.shape[1]))
-t = camera_resectioning(C[0,0,:,:])
-#for i in range(C1.shape[1]):
-    #C1 = 
-    #print(C1.shape)
-    #U[:,:,i], Q[:,:,i] = specRQ(C1[0,i,:,:])
-#print(U.shape)
-#print(b.shape)
-#t = np.matrix.transpose(U)*b
-#print(t)
+K = np.zeros((C.shape[1],3,3))
+R = np.zeros((C.shape[1],3,3))
+t = np.zeros((C.shape[1],3))
+
+for i in range(C.shape[1]):
+    K[i,:,:], R[i,:,:], t[i,:] = camera_resectioning(C[0,i,:,:])
+#print(K)
 #print(R)
-#print(Q)
-#K = C1[0,:,:,:]*np.matrix.transpose(Q)
-#print(K)
-#print(r)
-#print(q)
-#print(K)
+#print(t)
