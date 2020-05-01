@@ -4,18 +4,26 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 from matplotlib.patches import FancyArrowPatch
 from mpl_toolkits.mplot3d import proj3d
-
+"""
+    Prepare data from PCD (Point Cloud Data)
+"""
 #Get point cloud data (PCD)
 points = np.genfromtxt("stanfordbunny.txt", delimiter=" ")
 
 #Create a KDTree with the point cloud
 tree = KDTree(points)
 
+"""
+    Get K nearest neighbours from radius r
+"""
 #Look for the n nearest neighbours points in a sphere with r radius
 r = 0.01
 NN_index = tree.query_radius(points, r)  # NNs within distance of r of point
 normals = np.zeros(points.shape)
 
+"""
+    Calculate normals
+"""
 for i in range(NN_index.shape[0]):
     #Get the k points that are in the radius
     pi = points[NN_index[i]]
@@ -35,6 +43,9 @@ for i in range(NN_index.shape[0]):
     normal = eigenvectors[normal_NN_index]
     normals[i] = normal
 
+"""
+    Plot data
+"""
 # Plot vector and selected k points for last point
 last_i = NN_index.shape[0]-1
 pi = points[NN_index[last_i]]
@@ -52,6 +63,9 @@ ax.quiver(
     )
 plt.show()
 
+"""
+    Print to file
+"""
 #Print points and normals to file
 result = np.append(points, normals, axis=1)
 np.savetxt("bunny_normals.txt", result, delimiter=' ')
