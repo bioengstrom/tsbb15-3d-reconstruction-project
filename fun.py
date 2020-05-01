@@ -81,27 +81,54 @@ def specRQ(M):
 
 def specSVD(M):
     U, S, V = scipy.linalg.svd(M)
-    
-    #U0 = U[:,0:-1]
+
     un = U[:,-1]
+    vm = V[:,-1]
 
-    #V0 = V[:,0:-1]
-    #vm = V[:,-1]
-    
-    U1[:,-1] = np.linalg.det(U)*un
-    print()
-    s = [-1,-1]
-    #print((np.linalg.det(U)*un).shape)
-    #print(U0.shape)
-    #U1 = np.zeros((3,3))
-    #U1 = np.array((U0,(np.linalg.det(U)*un)))
-    #U1 = np.hstack((U0,np.linalg.det(U)*un))
-    #V1 = np.array((V0,np.linalg.det(V)*vm))
+    U[:,-1] = np.linalg.det(U)*un
+    V[:,-1] = np.linalg.det(V)*vm
 
+    s = S[-1]
     s1 = np.linalg.det(U)*np.linalg.det(V)*s
-    S[-1,-1] = s1
+    S[-1] = s1
 
-    return U1, S, V1
+    return U, S, V
+
+def relative_camera_pose(E, C1, C2, y1, y2):
+    U,S,Vh = specSVD(E)
+    W = np.zeros((3,3))
+    W[0,1] = 1
+    W[1,0] = -1
+    W[2,2] = 1
+
+    R1 = np.transpose(Vh)@W@np.transpose(U)
+    R2 = np.transpose(Vh)@np.transpose(W)@np.transpose(U)
+
+    print(R1)
+    print(R2)
+    V = np.transpose(Vh)
+    t1 = V[:,-1]
+    t2 = V[:,-1]*-1
+
+    #case1
+    x1 = lab3.triangulate_optimal(C1, C2, y1, y2)
+    x2 = R1*x+t1
+    if x1[-1] > 0 and x2[-1] > 0
+        return R1, t1
+    #case2
+    x2 = R1*x+t2
+    if x1[-1] > 0 and x2[-1] > 0
+        return R1, t2
+    #case3
+    x2 = R2*x+t1
+    if x1[-1] > 0 and x2[-1] > 0
+        return R2, t1
+    #case4
+    x2 = R2*x+t2
+    if x1[-1] > 0 and x2[-1] > 0
+        return R2, t2
+    
+    return W
 #input 3 x 4 camera matrix
 def camera_resectioning(C):
     A = C[:,0:3]

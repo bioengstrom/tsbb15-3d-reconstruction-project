@@ -24,6 +24,5 @@ for i in range(C.shape[1]):
 #print(t)
 M = np.ones((3,3))
 U, S, V = fun.specSVD(M)
-print(U)
-print(S)
-print(V)
+
+W = fun.relative_camera_pose(M)
