@@ -8,6 +8,7 @@ from scipy.optimize import least_squares
 import math
 
 def f_matrix(img1, img2) :
+
     point = np.loadtxt('imgdata\points.txt')
     points = point[:,:4]
     coords1_t = points[:,0:2]
