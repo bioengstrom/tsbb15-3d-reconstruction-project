@@ -16,44 +16,58 @@ def matchingMatrix(roi1, roi2) :
             #print(matrix[i,j])
     return matrix
 
-# Get regions of interest
-img = lab3.load_image("lab3img/indoors05.png")
-img1 = lab3.load_image("lab3img/img1.png")
-img2 = lab3.load_image("lab3img/img2.png")
-img1 = lab3.rgb2gray(img1)
-img2 = lab3.rgb2gray(img2)
+img1 = lab3.load_image("images/viff.000.ppm")
+img2 = lab3.load_image("images/viff.001.ppm")
+img1 = cv.cvtColor(img1, cv.COLOR_BGR2GRAY)
+img2 = cv.cvtColor(img2, cv.COLOR_BGR2GRAY)
 
-harris_1 = lab3.harris(img1, 7, 3)
-harris_2 = lab3.harris(img2, 7, 3)
-plt.imshow(harris_1)
+# harris_1 = lab3.harris(img1, 7, 3)
+# harris_2 = lab3.harris(img2, 7, 3)
+# plt.imshow(harris_1)
+#
+# harris_1 = lab3.non_max_suppression(harris_1, 9)
+# harris_2 = lab3.non_max_suppression(harris_2, 9)
+# coords1 = np.vstack(np.nonzero(harris_1 > 0.001*np.max(harris_1)))
+# coords2 = np.vstack(np.nonzero(harris_2 > 0.001*np.max(harris_2)))
+# print(coords1.shape, coords2.shape)
+# coords1 = np.flipud(coords1)
+# coords2 = np.flipud(coords2)
+#
+# roi1 = lab3.cut_out_rois(img1, coords1[0], coords1[1], 7)
+# roi2 = lab3.cut_out_rois(img2, coords2[0], coords2[1], 7)
+# roi1 = np.asarray(roi1); roi2 = np.asarray(roi2)
+# print(roi1.shape,roi2.shape)
+#
+# matrix = matchingMatrix(roi1, roi2)
+# vals, ri, ci = lab3.joint_min(matrix)
+#
+# coords1 = coords1[:,ri]
+# coords2 = coords2[:,ci]
+# print(coords1.shape, coords2.shape)
+# plt.figure()
+# plt.imshow(img1)
+# plt.scatter(coords1[0], coords1[1])
+# plt.show()
 
-harris_1 = lab3.non_max_suppression(harris_1, 9)
-harris_2 = lab3.non_max_suppression(harris_2, 9)
-coords1 = np.vstack(np.nonzero(harris_1 > 0.001*np.max(harris_1)))
-coords2 = np.vstack(np.nonzero(harris_2 > 0.001*np.max(harris_2)))
-print(coords1.shape, coords2.shape)
-coords1 = np.flipud(coords1)
-coords2 = np.flipud(coords2)
-
-roi1 = lab3.cut_out_rois(img1, coords1[0], coords1[1], 7)
-roi2 = lab3.cut_out_rois(img2, coords2[0], coords2[1], 7)
-roi1 = np.asarray(roi1); roi2 = np.asarray(roi2)
-print(roi1.shape,roi2.shape)
-
-matrix = matchingMatrix(roi1, roi2)
-vals, ri, ci = lab3.joint_min(matrix)
-
-coords1 = coords1[:,ri]
-coords2 = coords2[:,ci]
-print(coords1.shape, coords2.shape)
-plt.figure()
+point = np.loadtxt('imgdata\points.txt')
+points = point[:,:4]
+print(points.shape)
+coords1_t = points[:,0:2]
+coords2_t = points[:,2:4]
+coords1_t = coords1_t[np.any(coords1_t != -1, axis=1), :]
+coords2_t = coords2_t[np.any(coords2_t != -1, axis=1), :]
+coords2_t = coords2_t[:coords1_t.shape[0],:]
+print(coords1_t.shape)
+print(coords2_t.shape)
+coords1 = coords1_t.T
+coords2 = coords2_t.T
 plt.imshow(img1)
 plt.scatter(coords1[0], coords1[1])
 plt.show()
 
-# Estimate F using 7-point algorithm
-coords1_t = coords1.T
-coords2_t = coords2.T
+
+print(coords1.shape)
+print(coords2.shape)
 F, mask = cv.findFundamentalMat(coords1_t, coords2_t, cv.FM_RANSAC)
 
 lab3.plot_eplines(F, coords2, img1.shape)
