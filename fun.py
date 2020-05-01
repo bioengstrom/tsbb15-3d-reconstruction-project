@@ -1,0 +1,122 @@
+import lab3
+import cv2 as cv
+import numpy as np
+import scipy
+from matplotlib import pyplot as plt
+from skimage.feature import peak_local_max
+from scipy.optimize import least_squares
+import math
+
+def f_matrix(img1, img2) :
+    point = np.loadtxt('imgdata\points.txt')
+    points = point[:,:4]
+    coords1_t = points[:,0:2]
+    coords2_t = points[:,2:4]
+    coords1_t = coords1_t[np.any(coords1_t != -1, axis=1), :]
+    coords2_t = coords2_t[np.any(coords2_t != -1, axis=1), :]
+    coords2_t = coords2_t[:coords1_t.shape[0],:]
+    coords1 = coords1_t.T
+    coords2 = coords2_t.T
+    #plt.imshow(img1)
+    #plt.scatter(coords1[0], coords1[1])
+    #plt.show()
+
+    F, mask = cv.findFundamentalMat(coords1_t, coords2_t, cv.FM_RANSAC)
+
+    # We select only inlier points
+    coords1_t = coords1_t[mask.ravel()==1]
+    coords2_t = coords2_t[mask.ravel()==1]
+
+    inl1_coords1 = coords1_t.T
+    inl2_coords2 = coords2_t.T
+
+    #lab3.show_corresp(img1, img2, inl1_coords1, inl2_coords2)
+    #plt.show()
+
+    # camera 1 and 2
+    C1, C2 = lab3.fmatrix_cameras(F)
+    X = np.empty((3,inl1_coords1.shape[1]))
+    for i in range(inl1_coords1.shape[1]) :
+        X[:,i] = lab3.triangulate_optimal(C1, C2, inl1_coords1[:,i], inl2_coords2[:,i])
+
+    # minimize using least_squares
+    params = np.hstack((C1.ravel(), X.T.ravel()))
+    solution = least_squares(lab3.fmatrix_residuals_gs, params, args=(inl1_coords1,inl2_coords2))
+
+    C1 = solution.x[:12].reshape(3,4)
+    F_gold = lab3.fmatrix_from_cameras(C1, C2)
+
+    return F_gold, inl1_coords1, inl2_coords2
+
+#input n x 3 matrix
+def specRQ(M):
+    #own implementation of special rq, doesnt work
+    """
+    m3 = M[-1, :]
+    m2 = M[-2, :]
+    #print(M)
+    #print(m3)
+    #print(m2)
+
+    q3 = m3/np.linalg.norm(m3)
+    print(np.dot(q3,m2))
+    q2 = m2-(q3*np.dot(q3,m2))/(np.sqrt(np.linalg.norm(m2)**2-np.dot(q3,m2)**2))
+    q1 = np.cross(q2,q3)
+
+    Q = np.array((q1,q2,q3))
+    U = M*np.matrix.transpose(Q)
+
+    #test
+    M1 = U*Q
+    print(Q)
+    print(U)
+    """
+    #maybe right implementation of special rq
+    U, Q = scipy.linalg.rq(M)
+    if np.linalg.det(Q) == -1:
+        U[0,:] = U[0,:]*-1
+        Q[0,:] = Q[0,:]*-1
+
+    return U, Q
+
+def specSVD(M):
+    U, S, V = scipy.linalg.svd(M)
+    
+    #U0 = U[:,0:-1]
+    un = U[:,-1]
+
+    #V0 = V[:,0:-1]
+    #vm = V[:,-1]
+    
+    U1[:,-1] = np.linalg.det(U)*un
+    print()
+    s = [-1,-1]
+    #print((np.linalg.det(U)*un).shape)
+    #print(U0.shape)
+    #U1 = np.zeros((3,3))
+    #U1 = np.array((U0,(np.linalg.det(U)*un)))
+    #U1 = np.hstack((U0,np.linalg.det(U)*un))
+    #V1 = np.array((V0,np.linalg.det(V)*vm))
+
+    s1 = np.linalg.det(U)*np.linalg.det(V)*s
+    S[-1,-1] = s1
+
+    return U1, S, V1
+#input 3 x 4 camera matrix
+def camera_resectioning(C):
+    A = C[:,0:3]
+    b = C[:,3]
+
+    U, Q = specRQ(A)
+    t = np.matmul(np.matrix.transpose(U), b)
+    U = U/U[2,2]
+    D = np.sign(U)
+    K = U*D
+
+    if np.linalg.det(D) == 1:
+        R = np.matmul(D,Q)
+        t = np.matmul(D,t)
+    else:
+        R = np.matmul(-1*D,Q)
+        t = np.matmul(-1*D,t)
+    return K,R,t
