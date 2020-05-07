@@ -126,7 +126,7 @@ def specSVD(M):
 
     return U, S, V
 
-def relative_camera_pose(E, C1, C2, y1, y2):
+def relative_camera_pose(E, y1, y2):
     U,S,Vh = specSVD(E)
     W = np.zeros((3,3))
     W[0,1] = 1
@@ -140,21 +140,43 @@ def relative_camera_pose(E, C1, C2, y1, y2):
     t1 = V[:,-1]
     t2 = V[:,-1]*-1
 
-    #case1
-    x1 = lab3.triangulate_optimal(C1, C2, y1, y2)
+    #C0 [I | 0]
+    C0 = np.zeros((3,4), dtype='double')
+    C0[:3,:3] = np.eye(3)
 
+    C1t1R1 = np.zeros((3,4), dtype='double')
+    C1t1R1[:,-1] = t1
+    C1t1R1[:3,:3] = R1
+
+    C1t1R2 = np.zeros((3,4), dtype='double')
+    C1t1R2[:,-1] = t1
+    C1t1R2[:3,:3] = R2
+
+    C1t2R1 = np.zeros((3,4), dtype='double')
+    C1t2R1[:,-1] = t2
+    C1t2R1[:3,:3] = R1
+
+    C1t2R2 = np.zeros((3,4), dtype='double')
+    C1t2R2[:,-1] = t2
+    C1t2R2[:3,:3] = R2
+
+    #case1
+    x1 = lab3.triangulate_optimal(C0, C1t1R1, y1, y2)
     x2 = (R1@x1)+t1
     if x1[-1] > 0 and x2[-1] > 0:
         return R1, t1
     #case2
+    x1 = lab3.triangulate_optimal(C0, C1t2R1, y1, y2)
     x2 = (R1@x1)+t2
     if x1[-1] > 0 and x2[-1] > 0:
         return R1, t2
     #case3
+    x1 = lab3.triangulate_optimal(C0, C1t1R2, y1, y2)
     x2 = (R2@x1)+t1
     if x1[-1] > 0 and x2[-1] > 0:
         return R2, t1
     #case4
+    x1 = lab3.triangulate_optimal(C0, C1t2R2, y1, y2)
     x2 = (R2@x1)+t2
     if x1[-1] > 0 and x2[-1] > 0:
         return R2, t2
