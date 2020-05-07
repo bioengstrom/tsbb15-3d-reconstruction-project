@@ -37,7 +37,7 @@ except AttributeError:
 try:
     LAB3_IMAGE_DIRECTORY = Path(os.environ['CVL_LAB3_IMAGEDIR'])
 except KeyError:
-    LAB3_IMAGE_DIRECTORY = Path('imgdata/')
+    LAB3_IMAGE_DIRECTORY = Path('lab3img')
 
 if not LAB3_IMAGE_DIRECTORY.exists():
     raise RuntimeError("Image directory '{}' does not exist. Try setting the CVL_LAB3_IMAGEDIR environment variable".format(LAB3_IMAGE_DIRECTORY))
@@ -415,7 +415,6 @@ def fmatrix_cameras(F):
     C1 = np.hstack((A, e1.reshape(-1,1)))
 
     return C1, C2
-
 
 def triangulate_optimal(C1, C2, x1, x2):
     """Optimal trinagulation of 3D point
