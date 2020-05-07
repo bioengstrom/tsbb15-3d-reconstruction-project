@@ -26,10 +26,11 @@ def f_matrix(img1, img2) :
     coords2_t = coords2_t[:coords1_t.shape[0],:]
     coords1 = coords1_t.T
     coords2 = coords2_t.T
+    """
     plt.imshow(img1)
     plt.scatter(coords1[0], coords1[1])
     plt.show()
-
+    """
     # harris_1 = lab3.harris(img1, 7, 3)
     # harris_2 = lab3.harris(img2, 7, 3)
     #
@@ -61,10 +62,10 @@ def f_matrix(img1, img2) :
 
     inl_coords1 = coords1_t.T
     inl_coords2 = coords2_t.T
-
+    """
     lab3.show_corresp(img1, img2, inl_coords1, inl_coords2)
     plt.show()
-
+    """
     # camera 1 and 2
     C1, C2 = lab3.fmatrix_cameras(F)
     X = np.empty((3,inl_coords1.shape[1]))

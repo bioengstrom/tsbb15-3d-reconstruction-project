@@ -8,6 +8,11 @@ import scipy.io as sio
 import lab3
 import matplotlib.pyplot as plt
 
+class CameraPose:
+    def __init__(self, R = np.identity(3), t = np.array([0.0, 0.0, 0.0])):
+        self.R = R
+        self.t = t
+
 """
     Load data
 """
@@ -33,11 +38,22 @@ Dino_36C = Dino_36C['P']
     INIT1: Choose initial views I1 & I2
 """
 #Naive: choose 2 first img
-F, y1, y2 = fun.f_matrix(images[0], images[1])
+#y1 and y2 are the consensus set C
+#Fy1y2 = fun.f_matrix(images[0], images[1])
+#np.save("Fmatrix", Fy1y2)
+Fy1y2 = np.load("Fmatrix.npy", allow_pickle=True)
+
+F = Fy1y2[0]
+y1 = Fy1y2[1]
+y2 = Fy1y2[2]
 
 """
     INIT2: Get E = R,t from the two intial views
 """
+
+T_points = []
+T_views = []
+T_obs = []
 
 C = np.asarray(Dino_36C.tolist())
 K = np.zeros((C.shape[1],3,3))
@@ -49,6 +65,15 @@ for i in range(C.shape[1]):
 
 #Calculate E = K.T*F*K
 E = np.matmul(np.transpose(K),np.matmul(F,K))
+R, t = fun.relative_camera_pose(E, y1[:,0], y2[:,0])
+C1 = CameraPose()
+C2 = CameraPose(R,t)
+
+for i in range(y1.shape[1]):
+    #Triangulate
+    
+
+
 
 """
     INIT3: Triangulate points.
@@ -92,7 +117,3 @@ E = np.matmul(np.transpose(K),np.matmul(F,K))
 """
     After last iteration: Bundle Adjustment if outliers were removed since last BA
 """
-
-E = np.matmul(np.transpose(K),np.matmul(F,K))
-
-R, t = fun.relative_camera_pose(E, C1, C2, y1[:,0], y2[:,0])
