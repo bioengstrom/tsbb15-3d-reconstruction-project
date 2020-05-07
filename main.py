@@ -28,12 +28,13 @@ for i in range(C.shape[1]):
     K[i,:,:], R[i,:,:], t[i,:] = fun.camera_resectioning(C[0,i,:,:])
 
 #E = K.T*F*K
-#E = np.matmul(np.transpose(K),np.matmul(F,K))
+E = np.matmul(np.transpose(K),np.matmul(F,K))
 #print(K)
-
+#The second camera. This is always [I | 0]
+C1, C2 = lab3.fmatrix_cameras(E)
 M = np.ones((3,3))
 U, S, V = fun.specSVD(M)
 
-R, t = fun.relative_camera_pose(M)
+R, t = fun.relative_camera_pose(E, C1, C2, d)
 print(R)
 print(t)
