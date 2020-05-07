@@ -3,29 +3,42 @@ from scipy import linalg
 import scipy.cluster
 import numpy as np
 import fun
-
-
-
 import cv2 as cv
 import scipy.io as sio
 import lab3
+import matplotlib.pyplot as plt
 
 """
     Load data
 """
-
-img1 = cv.imread("images/viff.000.ppm", cv.IMREAD_COLOR)
-img2 = cv.imread("images/viff.001.ppm", cv.IMREAD_COLOR)
-img1 = cv.cvtColor(img1, cv.COLOR_BGR2GRAY)
-img2 = cv.cvtColor(img2, cv.COLOR_BGR2GRAY)
-
-F, y1, y2 = fun.f_matrix(img1, img2)
+no_of_images = 36
+img1 = cv.imread("../images/viff.000.ppm", cv.IMREAD_COLOR)
+img1 = np.asarray(img1)
 
 
-Dino_36C = sio.loadmat('imgdata\dino_Ps.mat')
+images = np.zeros([no_of_images, img1.shape[0],img1.shape[1],img1.shape[2]], dtype='int' )
 
+for i in range(no_of_images):
+    no = str(i)
+    if i < 10:
+        no = '0' + no
+    #img1 = np.asarray(cv.cvtColor(images[0], cv.COLOR_BGR2GRAY)) # Grayscale
+    #img2 = np.asarray(cv.cvtColor(images[1], cv.COLOR_BGR2GRAY))
+    images[i] = np.asarray(cv.imread("../images/viff.0" + no + ".ppm", cv.IMREAD_COLOR))
+
+Dino_36C = sio.loadmat('imgdata/dino_Ps.mat')
 Dino_36C = Dino_36C['P']
-#print(Dino_36C)
+
+"""
+    INIT1: Choose initial views I1 & I2
+"""
+#Naive: choose 2 first img
+F, y1, y2 = fun.f_matrix(images[0], images[1])
+
+"""
+    INIT2: Get E = R,t from the two intial views
+"""
+
 C = np.asarray(Dino_36C.tolist())
 K = np.zeros((C.shape[1],3,3))
 R = np.zeros((C.shape[1],3,3))
@@ -34,20 +47,11 @@ t = np.zeros((C.shape[1],3))
 for i in range(C.shape[1]):
     K, R[i,:,:], t[i,:] = fun.camera_resectioning(C[0,i,:,:])
 
-#E = K.T*F*K
-
+#Calculate E = K.T*F*K
 E = np.matmul(np.transpose(K),np.matmul(F,K))
 
 """
-    INIT1: Choose initial views I1 & I2
-"""
-
-"""
-    INIT2: Get E = R,t from the two intial views
-"""
-
-"""
-    INIT3: Triangulate points. Set l = 2
+    INIT3: Triangulate points.
 """
 
 """

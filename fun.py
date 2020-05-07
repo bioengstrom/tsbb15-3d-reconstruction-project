@@ -17,7 +17,7 @@ def matchingMatrix(roi1, roi2) :
 
 def f_matrix(img1, img2) :
 
-    point = np.loadtxt('imgdata\points.txt')
+    point = np.loadtxt('imgdata/points.txt')
     points = point[:,:4]
     coords1_t = points[:,0:2]
     coords2_t = points[:,2:4]
@@ -142,7 +142,7 @@ def relative_camera_pose(E, C1, C2, y1, y2):
 
     #case1
     x1 = lab3.triangulate_optimal(C1, C2, y1, y2)
-    
+
     x2 = (R1@x1)+t1
     if x1[-1] > 0 and x2[-1] > 0:
         return R1, t1
