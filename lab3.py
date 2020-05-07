@@ -27,43 +27,6 @@ from PIL import Image
 # from .lab2 import load_image_grayscale
 
 
-# Handle both OpenCV 2.4 and 3+
-try:
-    IMREAD_COLOR = cv2.IMREAD_COLOR
-except AttributeError:
-    IMREAD_COLOR = cv2.CV_LOAD_IMAGE_COLOR
-
-
-try:
-    LAB3_IMAGE_DIRECTORY = Path(os.environ['CVL_LAB3_IMAGEDIR'])
-except KeyError:
-    LAB3_IMAGE_DIRECTORY = Path('lab3img')
-
-if not LAB3_IMAGE_DIRECTORY.exists():
-    raise RuntimeError("Image directory '{}' does not exist. Try setting the CVL_LAB3_IMAGEDIR environment variable".format(LAB3_IMAGE_DIRECTORY))
-
-def load_image_grayscale(path):
-    "Load a grayscale image by path"
-    return np.asarray(PIL.Image.open(path).convert('L'))
-
-
-def load_stereo_pair():
-    """Load stereo image pair
-
-    Returns
-    ------------------
-    img1: np.ndarray
-        First image in pair
-    img2: np.ndarray
-        Second image in pair
-    """
-    pair = 'img'
-    return [
-        load_image_grayscale(LAB3_IMAGE_DIRECTORY / f'{pair}{i}.png')
-        for i in (1, 2)
-    ]
-
-
 def homog(x):
     """Homogenous representation of a N-D point
 

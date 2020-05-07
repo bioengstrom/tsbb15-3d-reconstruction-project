@@ -136,27 +136,26 @@ def relative_camera_pose(E, C1, C2, y1, y2):
     R1 = np.transpose(Vh)@W@np.transpose(U)
     R2 = np.transpose(Vh)@np.transpose(W)@np.transpose(U)
 
-    print(R1)
-    print(R2)
     V = np.transpose(Vh)
     t1 = V[:,-1]
     t2 = V[:,-1]*-1
 
     #case1
     x1 = lab3.triangulate_optimal(C1, C2, y1, y2)
-    x2 = R1*x+t1
+    
+    x2 = (R1@x1)+t1
     if x1[-1] > 0 and x2[-1] > 0:
         return R1, t1
     #case2
-    x2 = R1*x+t2
+    x2 = (R1@x1)+t2
     if x1[-1] > 0 and x2[-1] > 0:
         return R1, t2
     #case3
-    x2 = R2*x+t1
+    x2 = (R2@x1)+t1
     if x1[-1] > 0 and x2[-1] > 0:
         return R2, t1
     #case4
-    x2 = R2*x+t2
+    x2 = (R2@x1)+t2
     if x1[-1] > 0 and x2[-1] > 0:
         return R2, t2
 
