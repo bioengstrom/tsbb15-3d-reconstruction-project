@@ -28,11 +28,6 @@ t = np.zeros((C.shape[1],3))
 for i in range(C.shape[1]):
     K, R[i,:,:], t[i,:] = fun.camera_resectioning(C[0,i,:,:])
 
-#E = K.T*F*K
 E = np.matmul(np.transpose(K),np.matmul(F,K))
-#The second camera. This is always [I | 0]
-C1, C2 = lab3.fmatrix_cameras(E)
 
-R, t = fun.relative_camera_pose(E, C1, C2, y1[:,0], y2[:,0])
-print(R)
-print(t)
+R, t = fun.relative_camera_pose(E, y1[:,0], y2[:,0])
