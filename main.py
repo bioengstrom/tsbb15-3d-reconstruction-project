@@ -20,9 +20,10 @@ for i in range(C.shape[1]):
 #E = K.T*F*K
 #E = np.matmul(np.transpose(K),np.matmul(F,K))
 #print(K)
-#print(R)
-#print(t)
+
 M = np.ones((3,3))
 U, S, V = fun.specSVD(M)
 
-W = fun.relative_camera_pose(M)
+R, t = fun.relative_camera_pose(M)
+print(R)
+print(t)

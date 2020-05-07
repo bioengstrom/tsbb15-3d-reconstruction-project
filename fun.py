@@ -3,7 +3,6 @@ import cv2 as cv
 import numpy as np
 import scipy
 from matplotlib import pyplot as plt
-from skimage.feature import peak_local_max
 from scipy.optimize import least_squares
 import math
 
@@ -113,22 +112,21 @@ def relative_camera_pose(E, C1, C2, y1, y2):
     #case1
     x1 = lab3.triangulate_optimal(C1, C2, y1, y2)
     x2 = R1*x+t1
-    if x1[-1] > 0 and x2[-1] > 0
+    if x1[-1] > 0 and x2[-1] > 0:
         return R1, t1
     #case2
     x2 = R1*x+t2
-    if x1[-1] > 0 and x2[-1] > 0
+    if x1[-1] > 0 and x2[-1] > 0:
         return R1, t2
     #case3
     x2 = R2*x+t1
-    if x1[-1] > 0 and x2[-1] > 0
+    if x1[-1] > 0 and x2[-1] > 0:
         return R2, t1
     #case4
     x2 = R2*x+t2
-    if x1[-1] > 0 and x2[-1] > 0
+    if x1[-1] > 0 and x2[-1] > 0:
         return R2, t2
-    
-    return W
+
 #input 3 x 4 camera matrix
 def camera_resectioning(C):
     A = C[:,0:3]
