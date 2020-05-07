@@ -1,12 +1,12 @@
-import scipy.io as sio
 import scipy
 from scipy import linalg
 import scipy.cluster
 import numpy as np
 import fun
 import cv2 as cv
-
+import scipy.io as sio
 print("Hello World")
+
 
 img1 = cv.imread("images/viff.000.ppm", cv.IMREAD_COLOR)
 img2 = cv.imread("images/viff.001.ppm", cv.IMREAD_COLOR)
