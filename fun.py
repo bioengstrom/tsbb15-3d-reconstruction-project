@@ -57,6 +57,85 @@ def f_matrix(img1, img2) :
 
     return F_gold, inl_coords1, inl_coords2
 
+#input n x 3 matrix
+def specRQ(M):
+    #own implementation of special rq, doesnt work
+    """
+    m3 = M[-1, :]
+    m2 = M[-2, :]
+    #print(M)
+    #print(m3)
+    #print(m2)
+
+    q3 = m3/np.linalg.norm(m3)
+    print(np.dot(q3,m2))
+    q2 = m2-(q3*np.dot(q3,m2))/(np.sqrt(np.linalg.norm(m2)**2-np.dot(q3,m2)**2))
+    q1 = np.cross(q2,q3)
+
+    Q = np.array((q1,q2,q3))
+    U = M*np.matrix.transpose(Q)
+
+    #test
+    M1 = U*Q
+    print(Q)
+    print(U)
+    """
+    #maybe right implementation of special rq
+    U, Q = scipy.linalg.rq(M)
+    if np.linalg.det(Q) == -1:
+        U[0,:] = U[0,:]*-1
+        Q[0,:] = Q[0,:]*-1
+
+    return U, Q
+
+def specSVD(M):
+    U, S, V = scipy.linalg.svd(M)
+
+    un = U[:,-1]
+    vm = V[:,-1]
+
+    U[:,-1] = np.linalg.det(U)*un
+    V[:,-1] = np.linalg.det(V)*vm
+
+    s = S[-1]
+    s1 = np.linalg.det(U)*np.linalg.det(V)*s
+    S[-1] = s1
+
+    return U, S, V
+
+def relative_camera_pose(E, C1, C2, y1, y2):
+    U,S,Vh = specSVD(E)
+    W = np.zeros((3,3))
+    W[0,1] = 1
+    W[1,0] = -1
+    W[2,2] = 1
+
+    R1 = np.transpose(Vh)@W@np.transpose(U)
+    R2 = np.transpose(Vh)@np.transpose(W)@np.transpose(U)
+
+    V = np.transpose(Vh)
+    t1 = V[:,-1]
+    t2 = V[:,-1]*-1
+
+    #case1
+    x1 = lab3.triangulate_optimal(C1, C2, y1, y2)
+
+    x2 = (R1@x1)+t1
+    if x1[-1] > 0 and x2[-1] > 0:
+        return R1, t1
+    #case2
+    x2 = (R1@x1)+t2
+    if x1[-1] > 0 and x2[-1] > 0:
+        return R1, t2
+    #case3
+    x2 = (R2@x1)+t1
+    if x1[-1] > 0 and x2[-1] > 0:
+        return R2, t1
+    #case4
+    x2 = (R2@x1)+t2
+    if x1[-1] > 0 and x2[-1] > 0:
+        return R2, t2
+
 #input 3 x 4 camera matrix
 def camera_resectioning(C):
     A = C[:,0:3]
