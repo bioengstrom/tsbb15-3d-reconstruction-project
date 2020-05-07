@@ -416,7 +416,6 @@ def fmatrix_cameras(F):
 
     return C1, C2
 
-
 def triangulate_optimal(C1, C2, x1, x2):
     """Optimal trinagulation of 3D point
 
