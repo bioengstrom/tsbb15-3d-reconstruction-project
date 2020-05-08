@@ -188,10 +188,10 @@ def camera_resectioning(C):
     b = C[:,3]
 
     U, Q = specRQ(A)
-    t = np.matmul(np.matrix.transpose(U), b)
+    t = np.matmul(scipy.linalg.inv(U), b)
     U = U/U[2,2]
     D = np.sign(U)
-    K = U*D
+    K = U@D
 
     if np.linalg.det(D) == 1:
         R = np.matmul(D,Q)
