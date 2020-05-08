@@ -149,8 +149,8 @@ Dino_36C = Dino_36C['P']
 Fy1y2 = np.load("Fmatrix.npy", allow_pickle=True)
 
 F = Fy1y2[0]
-y1 = Fy1y2[1]
-y2 = Fy1y2[2]
+y1p = Fy1y2[1]
+y2p = Fy1y2[2]
 
 """
     INIT2: Get E = R,t from the two intial views
@@ -165,6 +165,18 @@ t = np.zeros((C.shape[1],3))
 
 for i in range(C.shape[1]):
     K, R[i,:,:], t[i,:] = fun.camera_resectioning(C[0,i,:,:])
+
+#Normalizing corresponding points
+y1p1 = np.zeros((3,y1p.shape[1]), dtype='double')
+y1p1[:2,:] = y1p[:2,:]
+y1p1[-1,:] = 1
+
+y2p1 = np.zeros((3,y2p.shape[1]), dtype='double')
+y2p1[:2,:] = y2p[:2,:]
+y2p1[-1,:] = 1
+
+y1 = scipy.linalg.inv(K)@y1p1
+y2 = scipy.linalg.inv(K)@y2p1
 
 #Calculate E = K.T*F*K
 E = np.matmul(np.transpose(K),np.matmul(F,K))
@@ -188,7 +200,7 @@ for i in range(y1.shape[1]):
     T_tables.addObs(y2[:,i], view_index_2, point_index)
 
 #print(T_tables)
-T_tables.plot()
+#T_tables.plot()
 
 """
     Iterate through all images in sequence
