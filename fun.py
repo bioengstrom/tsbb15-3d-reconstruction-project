@@ -26,9 +26,9 @@ def f_matrix(img1, img2) :
     coords2_t = coords2_t[:coords1_t.shape[0],:]
     coords1 = coords1_t.T
     coords2 = coords2_t.T
-    # plt.imshow(img1)
-    # plt.scatter(coords1[0], coords1[1])
-    # plt.show()
+    plt.imshow(img1)
+    plt.scatter(coords1[0], coords1[1])
+    plt.show()
 
     F, mask = cv.findFundamentalMat(coords1_t, coords2_t, cv.FM_RANSAC)
 
@@ -51,7 +51,7 @@ def f_matrix(img1, img2) :
     # minimize using least_squares
     params = np.hstack((C1.ravel(), X.T.ravel()))
     solution = least_squares(lab3.fmatrix_residuals_gs, params, args=(inl_coords1,inl_coords2))
-    print("snabbt")
+
     C1 = solution.x[:12].reshape(3,4)
     F_gold = lab3.fmatrix_from_cameras(C1, C2)
 

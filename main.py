@@ -16,8 +16,12 @@ img2 = cv.imread("images/viff.001.ppm", cv.IMREAD_COLOR)
 img1 = cv.cvtColor(img1, cv.COLOR_BGR2GRAY)
 img2 = cv.cvtColor(img2, cv.COLOR_BGR2GRAY)
 
-#F, *_ = fun.f_matrix(img1, img2)
-
+#F, y1, y2 = fun.f_matrix(img1, img2)
+#np.save('F_matrix', F)
+#np.save('y1', y1)
+#np.save('y2', y2)
+y1 = np.load('y1.npy')
+y2 = np.load('y2.npy')
 F = np.load('F_matrix.npy')
 
 Dino_36C = sio.loadmat('imgdata\dino_Ps.mat')
@@ -37,6 +41,10 @@ E = np.matmul(np.transpose(K),np.matmul(F,K))
 #The second camera. This is always [I | 0]
 C1, C2 = lab3.fmatrix_cameras(E)
 
-R, t = fun.relative_camera_pose(E, C1, C2, y1[:,0], y2[:,0])
-print(R)
-print(t)
+R_est, t_est = fun.relative_camera_pose(E, C1, C2, y1[:,0], y2[:,0])
+#print(R_est)
+#print(t_est)
+
+# Similarity transformation
+M,m,s = cv
+print(R1.shape)
