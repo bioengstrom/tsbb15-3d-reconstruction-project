@@ -13,6 +13,103 @@ class CameraPose:
         self.R = R
         self.t = t
 
+    def __str__(self):
+        the_print = "R: "
+        the_print += str(self.R)
+        the_print += " t: "
+        the_print += str(self.t)
+
+        return the_print
+
+    def GetCameraMatrix(self):
+        C1t1R1 = np.zeros((3,4), dtype='double')
+        C1t1R1[:,-1] = self.t
+        C1t1R1[:3,:3] = self.R
+
+        return C1t1R1
+
+class Point_3D:
+    def __init__(self, point):
+        self.point = point
+        self.observations_index = np.array([], dtype = 'int')
+
+    def __str__(self):
+        the_print = "3D point: "
+        the_print += str(self.point)
+        the_print += " Observation index: "
+        the_print += str(self.observations_index)
+
+        return the_print
+
+class Observation:
+    def __init__(self, image_coordinates, view_index, point_3D_index):
+        self.image_coordinates = image_coordinates
+        self.view_index = view_index
+        self.point_3D_index = point_3D_index
+    def __str__(self):
+        the_print = "OBSERVATION: "
+        the_print += "Image coords: "
+        the_print += str(self.image_coordinates)
+        the_print += " View index: "
+        the_print += str(self.view_index)
+        the_print += " 3D point index "
+        the_print += str(self.point_3D_index)
+
+        return the_print
+
+class View:
+    def __init__(self, image, camera_pose):
+        self.image = image
+        self.camera_pose = camera_pose
+        self.observations_index = np.array([], dtype = 'int')
+
+    def __str__(self):
+        the_print = "VIEW: "
+        the_print += "Image index: "
+        the_print += str(self.image)
+        the_print += " Camera pose: "
+        the_print += str(self.camera_pose)
+        the_print += " Observations table "
+        the_print += str(self.observations_index)
+
+        return the_print
+
+class Tables:
+
+    def __init__(self):
+        self.T_obs = np.array([], dtype = 'object')
+        self.T_views = np.array([], dtype = 'object')
+        self.T_points = np.array([], dtype = 'object')
+
+    def addView(self,image, pose):
+        new_view = np.array([View(image, pose)])
+        self.T_views = np.append(self.T_views, new_view)
+        return self.T_views.size-1 #Return index to added item
+
+    def addPoint(self,coord):
+        new_point = np.array([Point_3D(coord)])
+        self.T_points = np.append(self.T_points, new_point)
+        return self.T_points.size-1 #Return index to added item
+
+    def addObs(self,coord, view_index, point_index):
+        new_obs = np.array([Observation(coord, view_index, point_index)])
+        self.T_obs = np.append(self.T_obs, new_obs)
+        self.T_views[view_index].observations_index = T_obs.size() - 1
+        self.T_points[view_index].observations_index = T_obs.size() - 1
+
+    def __str__(self):
+        print_array = np.vectorize(str, otypes=[object])
+        the_print = "TABLES: \n"
+        the_print += "3D points table: \n"
+        the_print += str(print_array(self.T_points))
+        the_print += "\nView table\n"
+        the_print += str(print_array(self.T_views))
+        the_print += "\nObservations table\n"
+        the_print += str(print_array(self.T_obs))
+
+        return the_print
+
+
 """
     Load data
 """
@@ -51,9 +148,7 @@ y2 = Fy1y2[2]
     INIT2: Get E = R,t from the two intial views
 """
 
-T_points = []
-T_views = []
-T_obs = []
+T_tables = Tables()
 
 C = np.asarray(Dino_36C.tolist())
 K = np.zeros((C.shape[1],3,3))
@@ -69,9 +164,17 @@ R, t = fun.relative_camera_pose(E, y1[:,0], y2[:,0])
 C1 = CameraPose()
 C2 = CameraPose(R,t)
 
+#Add index 0 and C1 for image 1 and first camera pose. Same for second image and C2
+T_tables.addView(0,C1)
+T_tables.addView(1,C2)
+
 for i in range(y1.shape[1]):
-    #Triangulate
-    
+    #Triangulate points and add to tables
+    new_3D_point = lab3.triangulate_optimal(C1.GetCameraMatrix(), C2.GetCameraMatrix(), y1[:,i], y2[:,i])
+    T_tables.addPoint(new_3D_point)
+
+print(T_tables)
+
 
 
 
