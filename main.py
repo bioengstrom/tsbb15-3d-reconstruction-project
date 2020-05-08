@@ -42,9 +42,22 @@ E = np.matmul(np.transpose(K),np.matmul(F,K))
 C1, C2 = lab3.fmatrix_cameras(E)
 
 R_est, t_est = fun.relative_camera_pose(E, C1, C2, y1[:,0], y2[:,0])
-#print(R_est)
-#print(t_est)
-
-# Similarity transformation
-M,m,s = cv
+print(t_est)
+t1 = t[0]
+R1 = R[0]
 print(R1.shape)
+
+# map t_est to t, t = t_est + m
+#translation
+m = t1 - t_est
+M = np.outer((t1 - m),t_est)
+
+print(t1)
+t_mapped = np.matmul(M,t_est) + m
+print(t_mapped)
+R_mapped = R_est@np.transpose(M)
+print(R1)
+print(R_mapped)
+
+err = np.linalg.norm(t1 - t_mapped)
+print(err)
