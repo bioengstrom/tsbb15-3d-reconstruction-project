@@ -7,6 +7,7 @@ import cv2 as cv
 import scipy.io as sio
 import lab3
 import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
 
 class CameraPose:
     def __init__(self, R = np.identity(3), t = np.array([0.0, 0.0, 0.0])):
@@ -94,8 +95,8 @@ class Tables:
     def addObs(self,coord, view_index, point_index):
         new_obs = np.array([Observation(coord, view_index, point_index)])
         self.T_obs = np.append(self.T_obs, new_obs)
-        self.T_views[view_index].observations_index = T_obs.size() - 1
-        self.T_points[view_index].observations_index = T_obs.size() - 1
+        self.T_views[view_index].observations_index = self.T_obs.size - 1
+        self.T_points[point_index].observations_index = self.T_obs.size - 1
 
     def __str__(self):
         print_array = np.vectorize(str, otypes=[object])
@@ -109,7 +110,14 @@ class Tables:
 
         return the_print
 
-
+    def plot(self):
+        fig = plt.figure()
+        ax = fig.add_subplot(111, projection='3d')
+        for i in self.T_points:
+            ax.scatter(i.point[0], i.point[1], i.point[2], marker='o', color='orange')
+        for i in self.T_views:
+            ax.scatter(i.camera_pose.t[0], i.camera_pose.t[1], i.camera_pose.t[2], marker='^', color='black')
+        plt.show()
 """
     Load data
 """
@@ -165,22 +173,22 @@ C1 = CameraPose()
 C2 = CameraPose(R,t)
 
 #Add index 0 and C1 for image 1 and first camera pose. Same for second image and C2
-T_tables.addView(0,C1)
-T_tables.addView(1,C2)
-
-for i in range(y1.shape[1]):
-    #Triangulate points and add to tables
-    new_3D_point = lab3.triangulate_optimal(C1.GetCameraMatrix(), C2.GetCameraMatrix(), y1[:,i], y2[:,i])
-    T_tables.addPoint(new_3D_point)
-
-print(T_tables)
-
-
-
+view_index_1 = T_tables.addView(0,C1)
+view_index_2 = T_tables.addView(1,C2)
 
 """
     INIT3: Triangulate points.
 """
+
+for i in range(y1.shape[1]):
+    #Triangulate points and add to tables
+    new_3D_point = lab3.triangulate_optimal(C1.GetCameraMatrix(), C2.GetCameraMatrix(), y1[:,i], y2[:,i])
+    point_index = T_tables.addPoint(new_3D_point)
+    T_tables.addObs(y1[:,i], view_index_1, point_index)
+    T_tables.addObs(y2[:,i], view_index_2, point_index)
+
+#print(T_tables)
+T_tables.plot()
 
 """
     Iterate through all images in sequence
