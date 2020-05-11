@@ -8,6 +8,7 @@ import scipy.io as sio
 import lab3
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
+from scipy.optimize import least_squares
 
 class CameraPose:
     def __init__(self, R = np.identity(3), t = np.array([0.0, 0.0, 0.0])):
@@ -109,6 +110,26 @@ class Tables:
         the_print += str(print_array(self.T_obs))
 
         return the_print
+    """
+    def GetImgCoords(self):
+        for obs in self.T_obs:
+            self.T_obs
+        return T_obs.
+    """
+    def BundleAdjustment(self):
+        #y1 and y2 must be homogenous coordinates and normalized
+        def distance(y1, y2):
+            return np.abs(y1-y2)
+        #Function to minimise in order to do bundle adjustment. Input should be
+        #all observations so far
+        def EpsilonBA(obs):
+            yij = obs.image_coordinates
+            Rktk = self.T_views[obs.view_index].GetCameraMatrix()
+            xj = self.T_points[obs.point_3D_index].point
+            return np.sum(distance(yij, Rktk *xj)**2)
+
+        result = scipy.optimize.least_squares(EpsilonBA, self.T_obs)
+        return result
 
     def plot(self):
         fig = plt.figure()
@@ -118,6 +139,9 @@ class Tables:
         for i in self.T_views:
             ax.scatter(i.camera_pose.t[0], i.camera_pose.t[1], i.camera_pose.t[2], marker='^', color='black')
         plt.show()
+
+
+
 """
     Load data
 """
@@ -189,6 +213,8 @@ for i in range(y1.shape[1]):
 
 #print(T_tables)
 T_tables.plot()
+
+T_tables.BundleAdjustment()
 
 """
     Iterate through all images in sequence
