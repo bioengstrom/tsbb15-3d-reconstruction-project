@@ -122,14 +122,35 @@ class Tables:
             return np.abs(y1-y2)
         #Function to minimise in order to do bundle adjustment. Input should be
         #all observations so far
-        def EpsilonBA(obs):
-            yij = obs.image_coordinates
-            Rktk = self.T_views[obs.view_index].GetCameraMatrix()
-            xj = self.T_points[obs.point_3D_index].point
-            return np.sum(distance(yij, Rktk *xj)**2)
+        def EpsilonBA(x0, yij):
+            ratio = int((x0.shape[0]/16)*12)
+            size = int(ratio/(3*4))
+            Rktk = x0[:ratio]
+            xj = x0[ratio:]
+            Rktk = np.reshape(Rktk, [size, 3, 4])
+            xj = np.reshape(xj, [size, 4])
+            return np.sum(distance(yij,Rktk@xj.T)**2)
 
-        result = scipy.optimize.least_squares(EpsilonBA, self.T_obs)
-        return result
+        size = self.T_obs.shape[0]
+
+        yij = []
+        Rktk = []
+        xj = []
+
+        for o in self.T_obs:
+            for i in o.image_coordinates:
+                yij.append(i)
+                Rktk.append(self.T_views[o.view_index].camera_pose.GetCameraMatrix())
+                point = self.T_points[o.point_3D_index].point
+                xj.append([point[0],point[1],point[2],1.0] )
+
+        yij = np.asarray(yij)
+        Rktk = np.asarray(Rktk)
+        xj = np.asarray(xj)
+
+        x0 = np.hstack([Rktk.flatten(), xj.flatten()])
+
+        result = scipy.optimize.least_squares(EpsilonBA, x0, args=([yij]))
 
     def plot(self):
         fig = plt.figure()
@@ -140,7 +161,13 @@ class Tables:
             ax.scatter(i.camera_pose.t[0], i.camera_pose.t[1], i.camera_pose.t[2], marker='^', color='black')
         plt.show()
 
+def MakeHomogenous(K, coord):
+    #Normalizing corresponding points
+    coord_hom = np.zeros((3,coord.shape[1]), dtype='double')
+    coord_hom[:2,:] = coord[:2,:]
+    coord_hom[-1,:] = 1
 
+    return scipy.linalg.inv(K)@coord_hom
 
 """
     Load data
@@ -173,8 +200,12 @@ Dino_36C = Dino_36C['P']
 Fy1y2 = np.load("Fmatrix.npy", allow_pickle=True)
 
 F = Fy1y2[0]
-y1 = Fy1y2[1]
-y2 = Fy1y2[2]
+y1p = Fy1y2[1]
+y2p = Fy1y2[2]
+
+plt.imshow(images[0])
+plt.scatter(y1p[0], y1p[1], color='orange')
+plt.show()
 
 """
     INIT2: Get E = R,t from the two intial views
@@ -189,6 +220,9 @@ t = np.zeros((C.shape[1],3))
 
 for i in range(C.shape[1]):
     K, R[i,:,:], t[i,:] = fun.camera_resectioning(C[0,i,:,:])
+
+y1 = MakeHomogenous(K, y1p)
+y2 = MakeHomogenous(K, y2p)
 
 #Calculate E = K.T*F*K
 E = np.matmul(np.transpose(K),np.matmul(F,K))
@@ -214,15 +248,21 @@ for i in range(y1.shape[1]):
 #print(T_tables)
 T_tables.plot()
 
-T_tables.BundleAdjustment()
+result = T_tables.BundleAdjustment()
+np.save("BAresult1", result.x)
+#result = np.load("BAresult1.npy", allow_pickle=True)
+
+print(result)
 
 """
     Iterate through all images in sequence
 """
+#for img in images[:2]:
 
 """
     BA: Bundle Adjustment of all images so far
 """
+
 """
     WASH1: Remove bad 3D points
 """
