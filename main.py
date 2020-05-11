@@ -48,6 +48,7 @@ class Observation:
         self.image_coordinates = image_coordinates
         self.view_index = view_index
         self.point_3D_index = point_3D_index
+
     def __str__(self):
         the_print = "OBSERVATION: "
         the_print += "Image coords: "
@@ -129,7 +130,7 @@ class Tables:
             xj = x0[ratio:]
             Rktk = np.reshape(Rktk, [size, 3, 4])
             xj = np.reshape(xj, [size, 4])
-            return np.sum(distance(yij,Rktk@xj.T)**2)
+            return np.sum(distance(yij[:,:,None],Rktk @ xj[:,:,None])**2)
 
         size = self.T_obs.shape[0]
 
@@ -138,8 +139,8 @@ class Tables:
         xj = []
 
         for o in self.T_obs:
-            for i in o.image_coordinates:
-                yij.append(i)
+            for i in range(0,o.image_coordinates.shape[0],3):
+                yij.append(o.image_coordinates[i:3])
                 Rktk.append(self.T_views[o.view_index].camera_pose.GetCameraMatrix())
                 point = self.T_points[o.point_3D_index].point
                 xj.append([point[0],point[1],point[2],1.0] )
@@ -151,6 +152,7 @@ class Tables:
         x0 = np.hstack([Rktk.flatten(), xj.flatten()])
 
         result = scipy.optimize.least_squares(EpsilonBA, x0, args=([yij]))
+        return result
 
     def plot(self):
         fig = plt.figure()
@@ -210,7 +212,7 @@ plt.show()
 """
     INIT2: Get E = R,t from the two intial views
 """
-
+#Declare the tables to store the data
 T_tables = Tables()
 
 C = np.asarray(Dino_36C.tolist())
@@ -218,19 +220,24 @@ K = np.zeros((C.shape[1],3,3))
 R = np.zeros((C.shape[1],3,3))
 t = np.zeros((C.shape[1],3))
 
+#Get K, R and t for each camera
 for i in range(C.shape[1]):
     K, R[i,:,:], t[i,:] = fun.camera_resectioning(C[0,i,:,:])
 
+#Make the image coordinates homogenous
 y1 = MakeHomogenous(K, y1p)
 y2 = MakeHomogenous(K, y2p)
 
-#Calculate E = K.T*F*K
+#Calculate essential matrix E = K.T*F*K
 E = np.matmul(np.transpose(K),np.matmul(F,K))
+#Get R and t from E
 R, t = fun.relative_camera_pose(E, y1[:,0], y2[:,0])
+#Get first two camera poses
 C1 = CameraPose()
 C2 = CameraPose(R,t)
 
-#Add index 0 and C1 for image 1 and first camera pose. Same for second image and C2
+#Add the first two Views to the tables.
+#Index 0 and C1 for image 1 and first camera pose. Same for second image and C2
 view_index_1 = T_tables.addView(0,C1)
 view_index_2 = T_tables.addView(1,C2)
 
@@ -245,51 +252,50 @@ for i in range(y1.shape[1]):
     T_tables.addObs(y1[:,i], view_index_1, point_index)
     T_tables.addObs(y2[:,i], view_index_2, point_index)
 
-#print(T_tables)
-T_tables.plot()
 
+#print(T_tables)
+#T_tables.plot()
 result = T_tables.BundleAdjustment()
 np.save("BAresult1", result.x)
-#result = np.load("BAresult1.npy", allow_pickle=True)
-
-print(result)
+result = np.load("BAresult1.npy", allow_pickle=True)
+print(result.shape)
 
 """
     Iterate through all images in sequence
 """
-#for img in images[:2]:
+for img in images[:2]:
 
-"""
-    BA: Bundle Adjustment of all images so far
-"""
+    """
+        BA: Bundle Adjustment of all images so far
+    """
 
-"""
-    WASH1: Remove bad 3D points
-"""
+    """
+        WASH1: Remove bad 3D points. Re-triangulate & Remove outliers
+    """
 
-"""
-    EXT1: Choose new view C
-"""
+    """
+        EXT1: Choose new view C
+    """
 
-"""
-    EXT2: Find 2D<->3D correspondences
-"""
+    """
+        EXT2: Find 2D<->3D correspondences. Algorithm 21.2
+    """
 
-"""
-    EXT3: PnP -> R,t of new view and consensus set C
-"""
+    """
+        EXT3: PnP -> R,t of new view and consensus set C
+    """
 
-"""
-    EXT4: Extend table with new row and insert image points in C
-"""
+    """
+        EXT4: Extend table with new row and insert image points in C. Algorithm 21.3
+    """
 
-"""
-    EXT5: For each putative correspondence that satisfies E, extend table with column
-"""
+    """
+        EXT5: For each putative correspondence that satisfies E, extend table with column
+    """
 
-"""
-    WASH2: Check elements not in C and remove either 3D points or observation
-"""
+    """
+        WASH2: Check elements not in C and remove either 3D points or observation
+    """
 
 """
     After last iteration: Bundle Adjustment if outliers were removed since last BA
