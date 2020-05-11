@@ -274,16 +274,18 @@ for i in range(y1.shape[1]):
 """
     Iterate through all images in sequence
 """
+
 for img in images[:2]:
 
     """
         BA: Bundle Adjustment of all images so far
     """
     T_tables.BundleAdjustment()
-    
+
     """
         WASH1: Remove bad 3D points. Re-triangulate & Remove outliers
     """
+
 
     """
         EXT1: Choose new view C
