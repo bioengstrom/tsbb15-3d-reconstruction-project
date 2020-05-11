@@ -26,10 +26,6 @@ def f_matrix(img1, img2) :
     coords2_t = coords2_t[:coords1_t.shape[0],:]
     coords1 = coords1_t.T
     coords2 = coords2_t.T
-    """
-    plt.imshow(img1)
-    plt.scatter(coords1[0], coords1[1])
-    plt.show()
 
     F, mask = cv.findFundamentalMat(coords1_t, coords2_t, cv.FM_RANSAC)
 
@@ -39,10 +35,9 @@ def f_matrix(img1, img2) :
 
     inl_coords1 = coords1_t.T
     inl_coords2 = coords2_t.T
-    """
-    lab3.show_corresp(img1, img2, inl_coords1, inl_coords2)
-    plt.show()
-    """
+
+    #lab3.show_corresp(img1, img2, inl_coords1, inl_coords2)
+    #plt.show()
     # camera 1 and 2
     C1, C2 = lab3.fmatrix_cameras(F)
     X = np.empty((3,inl_coords1.shape[1]))
@@ -177,3 +172,34 @@ def camera_resectioning(C):
         R = np.matmul(-1*D,Q)
         t = np.matmul(-1*D,t)
     return K,R,t
+
+# Alg 15.4 IREG
+def estRigidTransformation(a, b) :
+    # t.shape should be (3,36)
+    # Compute centroids
+    m = a.shape[0]
+    a0 = (1/m) * np.sum(a)
+    b0 = (1/m) * np.sum(b)
+
+    # Barycentric coordinates
+    a_b = a - a0
+    b_b = b - b0
+
+    # Determine R: Strict version of OPP, alg 15.1 IREG
+    U, S, V = specSVD(A@B.T)
+    R = V@U.T # Rotation matrix
+    print(np.linalg.det(R))
+
+    t = b0 - R*a0 # Translation vector
+
+    return R, t
+
+def evaluation(R,t,R_est,t_est) :
+    M,m = estRigidTransformation(t, t_est)
+
+    t_mapped = M@t_est + m
+    R_mapped = R_est@M.T
+
+    # individual errors for the camera positions
+    err = np.linalg.norm(t - t_mapped)
+    #individual angular error

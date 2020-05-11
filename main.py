@@ -124,7 +124,7 @@ class Tables:
     Load data
 """
 no_of_images = 36
-img1 = cv.imread("../images/viff.000.ppm", cv.IMREAD_COLOR)
+img1 = cv.imread("images/viff.000.ppm", cv.IMREAD_COLOR)
 img1 = np.asarray(img1)
 
 
@@ -136,7 +136,7 @@ for i in range(no_of_images):
         no = '0' + no
     #img1 = np.asarray(cv.cvtColor(images[0], cv.COLOR_BGR2GRAY)) # Grayscale
     #img2 = np.asarray(cv.cvtColor(images[1], cv.COLOR_BGR2GRAY))
-    images[i] = np.asarray(cv.imread("../images/viff.0" + no + ".ppm", cv.IMREAD_COLOR))
+    images[i] = np.asarray(cv.imread("images/viff.0" + no + ".ppm", cv.IMREAD_COLOR))
 
 Dino_36C = sio.loadmat('imgdata/dino_Ps.mat')
 Dino_36C = Dino_36C['P']
@@ -170,9 +170,9 @@ for i in range(C.shape[1]):
 
 #Calculate E = K.T*F*K
 E = np.matmul(np.transpose(K),np.matmul(F,K))
-R, t = fun.relative_camera_pose(E, y1[:,0], y2[:,0])
+R_est, t_est = fun.relative_camera_pose(E, y1[:,0], y2[:,0])
 C1 = CameraPose()
-C2 = CameraPose(R,t)
+C2 = CameraPose(R_est,t_est)
 
 #Add index 0 and C1 for image 1 and first camera pose. Same for second image and C2
 view_index_1 = T_tables.addView(0,C1)
@@ -230,3 +230,21 @@ T_tables.plot()
 """
     After last iteration: Bundle Adjustment if outliers were removed since last BA
 """
+
+print(t.T.shape)
+print(t_est.shape)
+
+# R1 = R[0]
+# t1 = t[0]
+# m = t1 - t_est
+# M = np.outer((t1 - m),t_est)
+#
+# print(t1)
+# t_mapped = np.matmul(M,t_est) + m
+# print(t_mapped)
+# R_mapped = R_est@np.transpose(M)
+# print(R1)
+# print(R_mapped)
+#
+# err = np.linalg.norm(t1 - t_mapped)
+# print(err)
