@@ -117,6 +117,24 @@ class Tables:
             self.T_obs
         return T_obs.
     """
+    def getObsAsArrays(self):
+        yij = []
+        Rktk = []
+        xj = []
+
+        for o in self.T_obs:
+            for i in range(0,o.image_coordinates.shape[0],3):
+                yij.append(o.image_coordinates[i:3])
+                Rktk.append(self.T_views[o.view_index].camera_pose.GetCameraMatrix())
+                point = self.T_points[o.point_3D_index].point
+                xj.append([point[0],point[1],point[2],1.0] )
+
+        yij = np.asarray(yij)
+        Rktk = np.asarray(Rktk)
+        xj = np.asarray(xj)
+
+        return yij, Rktk, xj
+
     def BundleAdjustment(self):
         #y1 and y2 must be homogenous coordinates and normalized
         def distance(y1, y2):
@@ -132,22 +150,8 @@ class Tables:
             xj = np.reshape(xj, [size, 4])
             return np.sum(distance(yij[:,:,None],Rktk @ xj[:,:,None])**2)
 
-        size = self.T_obs.shape[0]
 
-        yij = []
-        Rktk = []
-        xj = []
-
-        for o in self.T_obs:
-            for i in range(0,o.image_coordinates.shape[0],3):
-                yij.append(o.image_coordinates[i:3])
-                Rktk.append(self.T_views[o.view_index].camera_pose.GetCameraMatrix())
-                point = self.T_points[o.point_3D_index].point
-                xj.append([point[0],point[1],point[2],1.0] )
-
-        yij = np.asarray(yij)
-        Rktk = np.asarray(Rktk)
-        xj = np.asarray(xj)
+        yij, Rktk, xj = self.getObsAsArrays
 
         x0 = np.hstack([Rktk.flatten(), xj.flatten()])
 
