@@ -1,4 +1,4 @@
 .DS_Store
 \images
 \lab3img
-3d-reconstruction-project/__pycache__/*
+__pycache__/*
