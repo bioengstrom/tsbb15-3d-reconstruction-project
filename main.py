@@ -142,21 +142,26 @@ class Tables:
         #Function to minimise in order to do bundle adjustment. Input should be
         #all observations so far
         def EpsilonBA(x0, yij):
-            ratio = int((x0.shape[0]/16)*12)
-            size = int(ratio/(3*4))
-            Rktk = x0[:ratio]
-            xj = x0[ratio:]
-            Rktk = np.reshape(Rktk, [size, 3, 4])
-            xj = np.reshape(xj, [size, 4])
+            Rktk, xj = reshapeToCamera3DPoints(x0)
             return np.sum(distance(yij[:,:,None],Rktk @ xj[:,:,None])**2)
 
-
-        yij, Rktk, xj = self.getObsAsArrays
+        #Get arrays from objects
+        yij, Rktk, xj = self.getObsAsArrays()
 
         x0 = np.hstack([Rktk.flatten(), xj.flatten()])
-
         result = scipy.optimize.least_squares(EpsilonBA, x0, args=([yij]))
-        return result
+        new_pose, new_points = reshapeToCamera3DPoints(result.x)
+
+        self.updateCameras3Dpoints(new_pose, new_points)
+
+    def updateCameras3Dpoints(self, new_pose, new_points):
+
+        for i, o in enumerate(self.T_obs):
+            t = new_pose[i,:,3]
+            R = new_pose[i,:3,:3]
+            self.T_views[o.view_index].camera_pose = CameraPose(R,t)
+            self.T_points[o.point_3D_index].point = new_points[i]
+
 
     def plot(self):
         fig = plt.figure()
@@ -174,6 +179,15 @@ def MakeHomogenous(K, coord):
     coord_hom[-1,:] = 1
 
     return scipy.linalg.inv(K)@coord_hom
+
+def reshapeToCamera3DPoints(x0):
+    ratio = int((x0.shape[0]/16)*12)
+    size = int(ratio/(3*4))
+    Rktk = x0[:ratio]
+    xj = x0[ratio:]
+    Rktk = np.reshape(Rktk, [size, 3, 4])
+    xj = np.reshape(xj, [size, 4])
+    return Rktk, xj
 
 """
     Load data
@@ -209,9 +223,10 @@ F = Fy1y2[0]
 y1p = Fy1y2[1]
 y2p = Fy1y2[2]
 
-plt.imshow(images[0])
-plt.scatter(y1p[0], y1p[1], color='orange')
-plt.show()
+#Show the image with interest points
+#plt.imshow(images[0])
+#plt.scatter(y1p[0], y1p[1], color='orange')
+#plt.show()
 
 """
     INIT2: Get E = R,t from the two intial views
@@ -256,14 +271,6 @@ for i in range(y1.shape[1]):
     T_tables.addObs(y1[:,i], view_index_1, point_index)
     T_tables.addObs(y2[:,i], view_index_2, point_index)
 
-
-#print(T_tables)
-#T_tables.plot()
-result = T_tables.BundleAdjustment()
-np.save("BAresult1", result.x)
-result = np.load("BAresult1.npy", allow_pickle=True)
-print(result.shape)
-
 """
     Iterate through all images in sequence
 """
@@ -272,7 +279,8 @@ for img in images[:2]:
     """
         BA: Bundle Adjustment of all images so far
     """
-
+    T_tables.BundleAdjustment()
+    
     """
         WASH1: Remove bad 3D points. Re-triangulate & Remove outliers
     """
