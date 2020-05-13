@@ -34,8 +34,16 @@ def dpp_squared(y1, y2):
 def calc_y_prim(x,R,t):
     return (R @ x) + t
 
-def ransac_robust(D_med, D_high, r, thresh, n):
+def homogeneous_to_cartesian(D_part):
+    if(D_part.shape[1] == 7):
+        temp1 = D_part[:,0:2] / D_part[:,[2]]
+        temp2 = D_part[:,3:6] / D_part[:,[-1]]
+        D_part = np.zeros((D_part.shape[0],5))
+        D_part[:,0:2] = temp1
+        D_part[:,2:] = temp2
+    return D_part
 
+def ransac_robust(D_med, D_high, r, thresh, n):
     """RANSAC algorithm for robust estimation of camera pose
     
     Parameters 
@@ -58,12 +66,16 @@ def ransac_robust(D_med, D_high, r, thresh, n):
     C_est:
         The corresponding consensus set, containing only correct corresp with probability p
     """    
-
+    #Convert D to kartesian coordinates if they were given as homogeneous
+    print(D_med.shape[1])
+    D_med = homogeneous_to_cartesian(D_med)
+    D_high = homogeneous_to_cartesian(D_high)
+    
     # Initialize the estimations as empty sets
     R_est = [] 
     t_est = []
     C_est = []
-
+    '''
     # Extract the image points of D_med and D_high
     y_med = D_med[:,0]
     y_high = D_high[:,0] 
@@ -109,5 +121,5 @@ def ransac_robust(D_med, D_high, r, thresh, n):
                 R_est = [R] 
                 t_est = [t]
                 C_est = [C]
-
+''' 
     return R_est, t_est, C_est
