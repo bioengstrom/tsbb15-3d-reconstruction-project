@@ -300,6 +300,7 @@ for i in range(y1.shape[1]):
 """
 
 for img in images[:2]:
+    #Select inlier 3D points T'points
 
     """
         BA: Bundle Adjustment of all images so far
@@ -309,23 +310,27 @@ for img in images[:2]:
     """
         WASH1: Remove bad 3D points. Re-triangulate & Remove outliers
     """
+    #For each 3D points in T points that is not in T'points
+    #Get corresponding observations y1 and y2 from T_obs and their camera poses C1 and C2 from T_views.
+    #Triangulate x from y1, y2, C1 and C2. Update 3D point in T_points
+    #Remove potential outliers from T_points after bundle adjustment
 
 
     """
         EXT1: Choose new view C
     """
 
-    """
-        EXT2: Find 2D<->3D correspondences. Algorithm 21.2
-    """
+
 
     """
+        EXT2: Find 2D<->3D correspondences. Algorithm 21.2
         EXT3: PnP -> R,t of new view and consensus set C
     """
 
     """
         EXT4: Extend table with new row and insert image points in C. Algorithm 21.3
     """
+    #Add new 3D points
 
     """
         EXT5: For each putative correspondence that satisfies E, extend table with column
