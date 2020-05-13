@@ -162,6 +162,30 @@ class Tables:
             self.T_views[o.view_index].camera_pose = CameraPose(R,t)
             self.T_points[o.point_3D_index].point = new_points[i]
 
+    #y1 & y2 are the putative correspondeces
+    def addNewView(self, img1, img2, coords1, coords2):
+        D = []
+        A = []
+        image_coords, views, points_3D = self.getObsAsArrays()
+        for y1, y2 in zip(coords1, coords2):
+            for i, coord in enumerate(image_coords):
+                if coord == a:
+                    #There is a corresponding 3D point x in T_points! Add y2, x to D
+                    D.append([y2, points_3D[i]])
+                else:
+                    #No correspondence found
+                    A.append([y1,y2])
+        #Pnp Algorithm return consensus set C of correspondences that agree with the estimated camera pose
+
+        #Set Camera pose C2 = (R2 | t2) for img2
+        #Add new view to T_views
+        #view_index = self.addView(img2, C2)
+        #for i, c in enumerate(C):
+        #    #Add all image points to T_obs. c[0] is y1 and c[2] is 3D point x
+        #    self.addObs(c[0], view_index, c[1])
+
+
+        #return a set of putative correspondences between the images so far without 3D points
 
     def plot(self):
         fig = plt.figure()
