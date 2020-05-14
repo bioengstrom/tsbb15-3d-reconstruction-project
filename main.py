@@ -66,8 +66,7 @@ cameras = getCameraMatrices()
 correspondences = Correspondences()
 y1, y2 = correspondences.getCorrByIndices(0,1)
 
-lab3.show_corresp(images[0], images[1], y1.T, y2.T)
-plt.show()
+
 
 """
     INIT1: Choose initial views I1 & I2
@@ -137,16 +136,9 @@ T_tables.plot()
 """
 #T_tables.BundleAdjustment()
 
-yp2, yp3 = correspondences.getCorrByIndices(1,2)
-lab3.show_corresp(images[0], images[1], yp2.T, yp3.T)
-plt.show()
-yp2_hom = MakeHomogenous(K, yp2)
-yp3_hom = MakeHomogenous(K, yp3)
 
-T_tables.addNewView(K, images[1], images[2], 2, yp2_hom[:100], yp3_hom[:100], yp2[:100], yp3[:100])
-T_tables.plot()
 
-for img in images[:1]:
+for i in range(images.shape[0]-1):
     #Select inlier 3D points T'points
 
     """
@@ -168,13 +160,18 @@ for img in images[:1]:
         EXT1: Choose new view C
     """
 
-
+    yp2, yp3 = correspondences.getCorrByIndices(i,i+1)
+    lab3.show_corresp(images[i], images[i+1], yp2.T, yp3.T)
+    plt.show()
+    yp2_hom = MakeHomogenous(K, yp2)
+    yp3_hom = MakeHomogenous(K, yp3)
 
     """
         EXT2: Find 2D<->3D correspondences. Algorithm 21.2
         EXT3: PnP -> R,t of new view and consensus set C
     """
-
+    T_tables.addNewView(K, images[1], images[2], 2, yp2_hom[:100], yp3_hom[:100], yp2[:100], yp3[:100])
+    T_tables.plot()
     """
         EXT4: Extend table with new row and insert image points in C. Algorithm 21.3
     """

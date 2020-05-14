@@ -98,6 +98,7 @@ class Tables:
         #Set D is the set that is containing matches with points already known
         D_3Dpoints = np.zeros([0,3])
         D_imgcoords = np.zeros([0,2])
+        D_imgcoords_hom = np.zeros([0,3])
         x_i = np.zeros([0], dtype='int')
         #A is the set of putative correspondences that do not find any match
         A_y1 = np.zeros([0,2])
@@ -113,6 +114,7 @@ class Tables:
                     D_3Dpoints = np.concatenate((D_3Dpoints, [self.T_points[j].point]), axis = 0)
                     #print(y2[i].shape)
                     D_imgcoords = np.concatenate((D_imgcoords, [y2[i]]), axis = 0)
+                    D_imgcoords_hom = np.concatenate((D_imgcoords_hom, [y2_hom[i]]), axis = 0)
                 else:
                     #No correspondence found - add to A
                     A_y1 = np.concatenate((A_y1, [y1[i]]), axis = 0)
@@ -129,7 +131,7 @@ class Tables:
         print("Ransac done!")
         #Make the rotation vector 3x3 matrix w open cv rodrigues method
         R, jacobian = cv.Rodrigues(R, R)
-        consensus_coords = D_imgcoords[inliers[:,0]]
+        consensus_coords = D_imgcoords_hom[inliers[:,0]]
         consensus_x_i = x_i[inliers[:,0]]
 
         #Set Camera pose C = (R | t) for img2
