@@ -141,15 +141,43 @@ class Tables:
             return np.abs(y1-y2)
         #Function to minimise in order to do bundle adjustment. Input should be
         #all observations so far
-        def EpsilonBA(x0, yij):
+        def EpsilonBA(x0, u, v):
+
             Rktk, xj = reshapeToCamera3DPoints(x0)
-            return np.sum(distance(yij[:,:,None],Rktk @ xj[:,:,None])**2)
+            ukj = u
+            vkj = v
+            #print(Rktk[:,:,:])
+            ck1 = Rktk[:,0,:]
+            ck2 = Rktk[:,1,:]
+            ck3 = Rktk[:,2,:]
+        
+            r = np.empty(([len(u)*2]))
+            #print((ck1*xj).sum(axis=1).shape)
+            #print((ck1[0,:]*xj[0,:]).sum(axis=1))
+            #print(c)
+            #print(xj)
+            #print(ck1*xj)
+            #print(ukj)
+            #print((ck1*xj).sum(axis=1)/(ck3*xj).sum(axis=1))
+            
+            res_ukj = ukj -  ((ck1*xj).sum(axis=1)/(ck3*xj).sum(axis=1))
+            res_vkj = vkj -  ((ck2*xj).sum(axis=1)/(ck3*xj).sum(axis=1))
+
+            r[::2] = res_ukj
+            r[1::2] = res_vkj
+
+            return r  
+            #return np.sum(distance(yij[:,:,None],Rktk @ xj[:,:,None])**2)
 
         #Get arrays from objects
         yij, Rktk, xj = self.getObsAsArrays()
+        for o in self.T_views:
+            Rktk = self.T_views[o.view_index].camera_pose.GetCameraMatrix()
 
         x0 = np.hstack([Rktk.flatten(), xj.flatten()])
-        result = scipy.optimize.least_squares(EpsilonBA, x0, args=([yij]))
+        result = scipy.optimize.least_squares(EpsilonBA, x0, args=([yij[:,0],yij[:,1]]))
+        #print(result.jac.shape)
+
         new_pose, new_points = reshapeToCamera3DPoints(result.x)
 
         self.updateCameras3Dpoints(new_pose, new_points)
@@ -171,6 +199,23 @@ class Tables:
         for i in self.T_views:
             ax.scatter(i.camera_pose.t[0], i.camera_pose.t[1], i.camera_pose.t[2], marker='^', color='black')
         plt.show()
+    
+    #function that computes a suitable sparsity pattern as a function of the number of point correspondences
+    def sparsity_mask(self):
+        
+        Jc = np.zeros((len(self.T_obs)*2, (len(self.T_views)*12)))
+        Jp = np.zeros((len(self.T_obs)*2, (len(self.T_points)*3)))
+        
+        k = 0
+        for i,o in enumerate (self.T_obs):
+            Jc[k:k+1,o.view_index*12:(o.view_index*12)+12] = 1
+            Jp[k:k+1,o.point_3D_index*3:(o.point_3D_index*3)+3] = 1
+            k = k+2
+      
+        J_mask = np.hstack((Jc,Jp))
+        return J_mask
+        
+        
 
 def MakeHomogenous(K, coord):
     #Normalizing corresponding points
@@ -271,6 +316,7 @@ for i in range(y1.shape[1]):
     T_tables.addObs(y1[:,i], view_index_1, point_index)
     T_tables.addObs(y2[:,i], view_index_2, point_index)
 
+T_tables.sparsity_mask()
 """
     Iterate through all images in sequence
 """
