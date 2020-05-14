@@ -124,7 +124,7 @@ class Tables:
         print(D_3Dpoints.shape[0])
         #Pnp Algorithm return consensus set C of correspondences that agree with the estimated camera pose
         dist_coeffs = np.zeros((4,1)) # Assuming no lens distortion
-        retval, R, t, inliers = cv.solvePnPRansac(D_3Dpoints[:3,:3], D_imgcoords[:3,:2], K, dist_coeffs)
+        retval, R, t, inliers = cv.solvePnPRansac(D_3Dpoints[:,:3], D_imgcoords[:,:2], K, dist_coeffs)
 
         print("Ransac done!")
         #Make the rotation vector 3x3 matrix w open cv rodrigues method
