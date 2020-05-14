@@ -9,6 +9,7 @@ import lab3
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 from scipy.optimize import least_squares
+from pnp import p3p
 
 class CameraPose:
     def __init__(self, R = np.identity(3), t = np.array([0.0, 0.0, 0.0])):
@@ -123,11 +124,10 @@ class Tables:
         xj = []
 
         for o in self.T_obs:
-            for i in range(0,o.image_coordinates.shape[0],3):
-                yij.append(o.image_coordinates[i:3])
+                yij.append(o.image_coordinates)
                 Rktk.append(self.T_views[o.view_index].camera_pose.GetCameraMatrix())
                 point = self.T_points[o.point_3D_index].point
-                xj.append([point[0],point[1],point[2],1.0] )
+                xj.append([point[0],point[1],point[2],1.0])
 
         yij = np.asarray(yij)
         Rktk = np.asarray(Rktk)
@@ -190,6 +190,61 @@ class Tables:
             self.T_views[o.view_index].camera_pose = CameraPose(R,t)
             self.T_points[o.point_3D_index].point = new_points[i]
 
+    #Add new new view to T_views
+    #coords1 & coords2 are the putative correspondeces
+    def addNewView(self, K, img1, img2, img_index, y1, y2):
+        print("Adding a view...")
+        #image_coords, views, points_3D = self.getObsAsArrays()
+        #Set D is the set that is containing matches with points already known
+        D_3Dpoints = np.zeros([0,4])
+        D_imgcoords = np.zeros([0,3])
+        x_i = np.zeros([0], dtype='int')
+        #A is the set of putative correspondences that do not find any match
+        A_y1 = np.zeros([0,3])
+        A_y2 = np.zeros([0,3])
+
+        for i in range(y1.shape[0]):
+            for o in self.T_obs:
+                print(np.linalg.norm(o.image_coordinates-y1[i]))
+
+                if np.linalg.norm(o.image_coordinates-y1[i]) < 0.01:
+                    #There is a corresponding 3D point x in T_points! Add y2, x to D
+                    j = o.point_3D_index
+                    x_i = np.concatenate((x_i, [j]), axis = 0)
+                    print(self.T_points[j].point.shape)
+                    D_3Dpoints = np.concatenate((D_3Dpoints, [self.T_points[j].point]), axis = 0)
+                    print(y2[i].shape)
+                    D_imgcoords = np.concatenate((D_imgcoords, [y2[i]]), axis = 0)
+                else:
+                    #No correspondence found - add to A
+                    A_y1 = np.concatenate((A_y1, [y1[i]]), axis = 0)
+                    A_y2 = np.concatenate((A_y2, [y2[i]]), axis = 0)
+        print(D_3Dpoints.shape)
+        print(D_imgcoords.shape)
+        print(x_i.shape)
+        print("Doing ransac pnp with n many elements:")
+        print()
+        #Pnp Algorithm return consensus set C of correspondences that agree with the estimated camera pose
+        dist_coeffs = np.zeros((4,1)) # Assuming no lens distortion
+        retval, R, t, inliers = cv.solvePnPRansac(D_3Dpoints[:,:3], D_imgcoords[:,:2], K, dist_coeffs)
+
+        print("Ransac done!")
+        #Make the rotation vector 3x3 matrix w open cv rodrigues method
+        R, jacobian = cv.Rodrigues(R, R)
+        consensus_coords = D_imgcoords[inliers[:,0]]
+        consensus_x_i = x_i[inliers[:,0]]
+
+        #Set Camera pose C = (R | t) for img2
+        C = CameraPose(R, t)
+
+        #Add new view to T_views
+        view_index = self.addView(img_index, C)
+        for y2, x in zip(consensus_coords, consensus_x_i):
+            #Add all image points to T_obs.
+            self.addObs(y2, view_index, x)
+
+        #return a set of putative correspondences between the images so far without 3D points
+        return A_y1, A_y2
 
     def plot(self):
         fig = plt.figure()
@@ -219,11 +274,12 @@ class Tables:
 
 def MakeHomogenous(K, coord):
     #Normalizing corresponding points
+    coord = coord.T
     coord_hom = np.zeros((3,coord.shape[1]), dtype='double')
     coord_hom[:2,:] = coord[:2,:]
     coord_hom[-1,:] = 1
-
-    return scipy.linalg.inv(K)@coord_hom
+    coord_hom = scipy.linalg.inv(K)@coord_hom
+    return coord_hom.T
 
 def reshapeToCamera3DPoints(x0):
     ratio = int((x0.shape[0]/16)*12)
@@ -234,39 +290,75 @@ def reshapeToCamera3DPoints(x0):
     xj = np.reshape(xj, [size, 4])
     return Rktk, xj
 
+def getImages():
+    no_of_images = 36
+    img1 = cv.imread("../images/viff.000.ppm", cv.IMREAD_COLOR)
+    img1 = np.asarray(img1)
+
+
+    images = np.zeros([no_of_images, img1.shape[0],img1.shape[1],img1.shape[2]], dtype='int' )
+
+    for i in range(no_of_images):
+        no = str(i)
+        if i < 10:
+            no = '0' + no
+        #img1 = np.asarray(cv.cvtColor(images[0], cv.COLOR_BGR2GRAY)) # Grayscale
+        #img2 = np.asarray(cv.cvtColor(images[1], cv.COLOR_BGR2GRAY))
+        images[i] = np.asarray(cv.imread("../images/viff.0" + no + ".ppm", cv.IMREAD_COLOR))
+    return images
+
+def getCameraMatrices():
+    #Load cameras
+    cameras = sio.loadmat('imgdata/dino_Ps.mat')
+    cameras = cameras['P']
+    return cameras
+
+class Correspondences:
+
+    def __init__(self):
+        self.points = np.loadtxt('imgdata/points.txt')
+
+    def getCorrByIndices(self,i1, i2):
+        y1 = self.points[:,i1*2:(i1*2)+2]
+        y2 = self.points[:,i1*2:(i1*2)+2]
+
+        #Make size same for both y1 and y2
+        #size = np.minimum(y1.shape[0], y2.shape[0])
+        #y1 = y1[:size,:]
+        #y2 = y2[:size,:]
+
+        #Remove all rows in y1 and y2 that has -1:s in any of y1 and y2
+        is_correspondence_y1 = np.array([np.any(y1 != -1, axis=1)], dtype='bool')
+        is_correspondence_y2 = np.array([np.any(y2 != -1, axis=1)], dtype='bool')
+        correspondence = np.logical_and(is_correspondence_y1, is_correspondence_y2)
+        y1 = y1[correspondence[0], :]
+        y2 = y2[correspondence[0], :]
+
+        return y1, y2
+
 """
     Load data
 """
-no_of_images = 36
-img1 = cv.imread("../images/viff.000.ppm", cv.IMREAD_COLOR)
-img1 = np.asarray(img1)
+#Get images and camera matrices
+images = getImages()
+cameras = getCameraMatrices()
 
-
-images = np.zeros([no_of_images, img1.shape[0],img1.shape[1],img1.shape[2]], dtype='int' )
-
-for i in range(no_of_images):
-    no = str(i)
-    if i < 10:
-        no = '0' + no
-    #img1 = np.asarray(cv.cvtColor(images[0], cv.COLOR_BGR2GRAY)) # Grayscale
-    #img2 = np.asarray(cv.cvtColor(images[1], cv.COLOR_BGR2GRAY))
-    images[i] = np.asarray(cv.imread("../images/viff.0" + no + ".ppm", cv.IMREAD_COLOR))
-
-Dino_36C = sio.loadmat('imgdata/dino_Ps.mat')
-Dino_36C = Dino_36C['P']
+#Get putative correspondence points
+correspondences = Correspondences()
+y1, y2 = correspondences.getCorrByIndices(0,1)
 
 """
     INIT1: Choose initial views I1 & I2
 """
 #Naive: choose 2 first img
 #y1 and y2 are the consensus set C
-#Fy1y2 = fun.f_matrix(images[0], images[1])
+#Fy1y2 = fun.f_matrix(images[0], images[1], y1, y2)
 #np.save("Fmatrix", Fy1y2)
 Fy1y2 = np.load("Fmatrix.npy", allow_pickle=True)
 
 F = Fy1y2[0]
-y1p = Fy1y2[1]
-y2p = Fy1y2[2]
+y1p = Fy1y2[1].T
+y2p = Fy1y2[2].T
 
 #Show the image with interest points
 #plt.imshow(images[0])
@@ -279,7 +371,7 @@ y2p = Fy1y2[2]
 #Declare the tables to store the data
 T_tables = Tables()
 
-C = np.asarray(Dino_36C.tolist())
+C = np.asarray(cameras.tolist())
 K = np.zeros((C.shape[1],3,3))
 R = np.zeros((C.shape[1],3,3))
 t = np.zeros((C.shape[1],3))
@@ -309,45 +401,64 @@ view_index_2 = T_tables.addView(1,C2)
     INIT3: Triangulate points.
 """
 
-for i in range(y1.shape[1]):
+for i in range(y1.shape[0]):
     #Triangulate points and add to tables
-    new_3D_point = lab3.triangulate_optimal(C1.GetCameraMatrix(), C2.GetCameraMatrix(), y1[:,i], y2[:,i])
+    new_3D_point = lab3.triangulate_optimal(C1.GetCameraMatrix(), C2.GetCameraMatrix(), y1[i], y2[i])
     point_index = T_tables.addPoint(new_3D_point)
-    T_tables.addObs(y1[:,i], view_index_1, point_index)
-    T_tables.addObs(y2[:,i], view_index_2, point_index)
+    T_tables.addObs(y1[i], view_index_1, point_index)
+    T_tables.addObs(y2[i], view_index_2, point_index)
 
 T_tables.sparsity_mask()
 """
     Iterate through all images in sequence
 """
+#T_tables.BundleAdjustment()
 
-for img in images[:2]:
+yp2, yp3 = correspondences.getCorrByIndices(1,2)
+yp2 = MakeHomogenous(K, yp2)
+yp3 = MakeHomogenous(K, yp3)
+print(yp2.shape)
+print(yp3.shape)
+
+T_tables.addNewView(K, images[1], images[2], 2, yp2[:100], yp3[:100])
+T_tables.plot()
+
+
+
+
+for img in images[:1]:
+    #Select inlier 3D points T'points
 
     """
         BA: Bundle Adjustment of all images so far
     """
-    T_tables.BundleAdjustment()
+
 
     """
         WASH1: Remove bad 3D points. Re-triangulate & Remove outliers
     """
+    #For each 3D points in T points that is not in T'points
+    #Get corresponding observations y1 and y2 from T_obs and their camera poses C1 and C2 from T_views.
+    #Triangulate x from y1, y2, C1 and C2. Update 3D point in T_points
+    #Remove potential outliers from T_points after bundle adjustment
+
 
 
     """
         EXT1: Choose new view C
     """
 
-    """
-        EXT2: Find 2D<->3D correspondences. Algorithm 21.2
-    """
+
 
     """
+        EXT2: Find 2D<->3D correspondences. Algorithm 21.2
         EXT3: PnP -> R,t of new view and consensus set C
     """
 
     """
         EXT4: Extend table with new row and insert image points in C. Algorithm 21.3
     """
+    #Add new 3D points
 
     """
         EXT5: For each putative correspondence that satisfies E, extend table with column
