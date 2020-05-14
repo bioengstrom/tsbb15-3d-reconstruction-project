@@ -15,17 +15,9 @@ def matchingMatrix(roi1, roi2) :
             #print(matrix[i,j])
     return matrix
 
-def f_matrix(img1, img2) :
+def f_matrix(img1, img2, coords1_t, coords2_t) :
 
-    point = np.loadtxt('imgdata/points.txt')
-    points = point[:,:4]
-    coords1_t = points[:,0:2]
-    coords2_t = points[:,2:4]
-    coords1_t = coords1_t[np.any(coords1_t != -1, axis=1), :]
-    coords2_t = coords2_t[np.any(coords2_t != -1, axis=1), :]
-    coords2_t = coords2_t[:coords1_t.shape[0],:]
-    coords1 = coords1_t.T
-    coords2 = coords2_t.T
+
     """
     plt.imshow(img1)
     plt.scatter(coords1[0], coords1[1])

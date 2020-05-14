@@ -9,6 +9,7 @@ import lab3
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 from scipy.optimize import least_squares
+from pnp import p3p
 
 class CameraPose:
     def __init__(self, R = np.identity(3), t = np.array([0.0, 0.0, 0.0])):
@@ -123,11 +124,10 @@ class Tables:
         xj = []
 
         for o in self.T_obs:
-            for i in range(0,o.image_coordinates.shape[0],3):
-                yij.append(o.image_coordinates[i:3])
+                yij.append(o.image_coordinates)
                 Rktk.append(self.T_views[o.view_index].camera_pose.GetCameraMatrix())
                 point = self.T_points[o.point_3D_index].point
-                xj.append([point[0],point[1],point[2],1.0] )
+                xj.append([point[0],point[1],point[2],1.0])
 
         yij = np.asarray(yij)
         Rktk = np.asarray(Rktk)
@@ -163,29 +163,48 @@ class Tables:
             self.T_points[o.point_3D_index].point = new_points[i]
 
     #y1 & y2 are the putative correspondeces
-    def addNewView(self, img1, img2, coords1, coords2):
-        D = []
-        A = []
+    def addNewView(self, K, img1, img2, img_index, coords1, coords2):
+
+
         image_coords, views, points_3D = self.getObsAsArrays()
+
+        D_3Dpoints = np.zeros([0,4])
+        D_imgcoords = np.zeros([0,3])
+        x_i = np.zeros([0], dtype='int')
+        A_y1 = np.zeros([0,3])
+        A_y2 = np.zeros([0,3])
+
         for y1, y2 in zip(coords1, coords2):
-            for i, coord in enumerate(image_coords):
-                if coord == a:
+            for i in range(0,image_coords.shape[0],3):
+                if np.linalg.norm(image_coords[i]-y1) < 0.0001:
                     #There is a corresponding 3D point x in T_points! Add y2, x to D
-                    D.append([y2, points_3D[i]])
+                    x_i = np.concatenate((x_i, [self.T_obs[i].point_3D_index]), axis = 0)
+                    D_3Dpoints = np.concatenate((D_3Dpoints, [points_3D[i]]), axis = 0)
+                    D_imgcoords = np.concatenate((D_imgcoords, [y2]), axis = 0)
                 else:
-                    #No correspondence found
-                    A.append([y1,y2])
+                    #No correspondence found - add to A
+                    A_y1 = np.concatenate((A_y1, [y1]), axis = 0)
+                    A_y2 = np.concatenate((A_y2, [y2]), axis = 0)
+
         #Pnp Algorithm return consensus set C of correspondences that agree with the estimated camera pose
+        dist_coeffs = np.zeros((4,1)) # Assuming no lens distortion
+        retval, R, t, inliers = cv.solvePnPRansac(D_3Dpoints[:,:3], D_imgcoords[:,:2], K, dist_coeffs)
+        #Make the rotation vector 3x3 matrix w open cv rodrigues method
+        R, jacobian = cv.Rodrigues(R, R)
+        consensus_set_C_coords = D_imgcoords[inliers[:,0]]
+        x_i = x_i[inliers[:,0]]
 
-        #Set Camera pose C2 = (R2 | t2) for img2
+        #Set Camera pose C = (R | t) for img2
+        C = CameraPose(R, t)
+
         #Add new view to T_views
-        #view_index = self.addView(img2, C2)
-        #for i, c in enumerate(C):
-        #    #Add all image points to T_obs. c[0] is y1 and c[2] is 3D point x
-        #    self.addObs(c[0], view_index, c[1])
-
+        view_index = self.addView(img_index, C)
+        for y2, x in zip(consensus_set_C_coords, x_i):
+            #Add all image points to T_obs.
+            self.addObs(y2, view_index, x)
 
         #return a set of putative correspondences between the images so far without 3D points
+        return A_y1, A_y2
 
     def plot(self):
         fig = plt.figure()
@@ -231,8 +250,33 @@ for i in range(no_of_images):
     #img2 = np.asarray(cv.cvtColor(images[1], cv.COLOR_BGR2GRAY))
     images[i] = np.asarray(cv.imread("../images/viff.0" + no + ".ppm", cv.IMREAD_COLOR))
 
+#Load cameras
 Dino_36C = sio.loadmat('imgdata/dino_Ps.mat')
 Dino_36C = Dino_36C['P']
+
+#Get putative correspondence points
+point = np.loadtxt('imgdata/points.txt')
+points = point[:,:4]
+coords1_t = points[:,0:2]
+coords2_t = points[:,2:4]
+coords1_t = coords1_t[np.any(coords1_t != -1, axis=1), :]
+coords2_t = coords2_t[np.any(coords2_t != -1, axis=1), :]
+
+
+# TODO: Make this better somehow hehe
+points3 = point[:,4:6]
+points3 = points3[np.any(points3 != -1, axis=1), :]
+
+points2 = coords2_t
+points2 = points2[:points3.shape[0],:]
+points2 = points2.T
+points3 = points3.T
+
+
+
+coords2_t = coords2_t[:coords1_t.shape[0],:]
+coords1 = coords1_t.T
+coords2 = coords2_t.T
 
 """
     INIT1: Choose initial views I1 & I2
@@ -298,14 +342,20 @@ for i in range(y1.shape[1]):
 """
     Iterate through all images in sequence
 """
+T_tables.BundleAdjustment()
 
-for img in images[:2]:
+yp2 = MakeHomogenous(K, points2)
+yp3 = MakeHomogenous(K, points3)
+T_tables.addNewView(K, images[1], images[2], 2, yp2.T, yp3.T)
+T_tables.plot()
+
+for img in images[:1]:
     #Select inlier 3D points T'points
 
     """
         BA: Bundle Adjustment of all images so far
     """
-    T_tables.BundleAdjustment()
+
 
     """
         WASH1: Remove bad 3D points. Re-triangulate & Remove outliers
@@ -314,6 +364,7 @@ for img in images[:2]:
     #Get corresponding observations y1 and y2 from T_obs and their camera poses C1 and C2 from T_views.
     #Triangulate x from y1, y2, C1 and C2. Update 3D point in T_points
     #Remove potential outliers from T_points after bundle adjustment
+
 
 
     """
