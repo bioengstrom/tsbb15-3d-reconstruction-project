@@ -92,20 +92,20 @@ class Tables:
 
     #Add new new view to T_views
     #coords1 & coords2 are the putative correspondeces
-    def addNewView(self, K, img1, img2, img_index, y1, y2):
+    def addNewView(self, K, img1, img2, img_index, y1_hom, y2_hom, y1, y2):
         print("Adding a view...")
         #image_coords, views, points_3D = self.getObsAsArrays()
         #Set D is the set that is containing matches with points already known
         D_3Dpoints = np.zeros([0,3])
-        D_imgcoords = np.zeros([0,3])
+        D_imgcoords = np.zeros([0,2])
         x_i = np.zeros([0], dtype='int')
         #A is the set of putative correspondences that do not find any match
-        A_y1 = np.zeros([0,3])
-        A_y2 = np.zeros([0,3])
+        A_y1 = np.zeros([0,2])
+        A_y2 = np.zeros([0,2])
 
         for i in range(y1.shape[0]):
             for o in self.T_obs:
-                if np.linalg.norm(o.image_coordinates-y1[i]) < 0.01:
+                if np.linalg.norm(o.image_coordinates-y1_hom[i]) < 0.01:
                     #There is a corresponding 3D point x in T_points! Add y2, x to D
                     j = o.point_3D_index
                     x_i = np.concatenate((x_i, [j]), axis = 0)
@@ -121,10 +121,10 @@ class Tables:
         print(D_imgcoords.shape)
         print(x_i.shape)
         print("Doing ransac pnp with n many elements:")
-        print()
+        print(D_3Dpoints.shape[0])
         #Pnp Algorithm return consensus set C of correspondences that agree with the estimated camera pose
         dist_coeffs = np.zeros((4,1)) # Assuming no lens distortion
-        retval, R, t, inliers = cv.solvePnPRansac(D_3Dpoints[:,:3], D_imgcoords[:,:2], K, dist_coeffs)
+        retval, R, t, inliers = cv.solvePnPRansac(D_3Dpoints[:3,:3], D_imgcoords[:3,:2], K, dist_coeffs)
 
         print("Ransac done!")
         #Make the rotation vector 3x3 matrix w open cv rodrigues method

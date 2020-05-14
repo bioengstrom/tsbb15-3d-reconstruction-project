@@ -55,8 +55,6 @@ def getCameraMatrices():
     cameras = cameras['P']
     return cameras
 
-
-
 """
     Load data
 """
@@ -85,9 +83,9 @@ y1p = Fy1y2[1].T
 y2p = Fy1y2[2].T
 
 #Show the image with interest points
-#plt.imshow(images[0])
-#plt.scatter(y1p[0], y1p[1], color='orange')
-#plt.show()
+plt.imshow(images[0])
+plt.scatter(y1p[:,0], y1p[:,1], color='orange')
+plt.show()
 
 """
     INIT2: Get E = R,t from the two intial views
@@ -140,16 +138,13 @@ T_tables.plot()
 #T_tables.BundleAdjustment()
 
 yp2, yp3 = correspondences.getCorrByIndices(1,2)
-yp2 = MakeHomogenous(K, yp2)
-yp3 = MakeHomogenous(K, yp3)
-print(yp2.shape)
-print(yp3.shape)
+lab3.show_corresp(images[0], images[1], yp2.T, yp3.T)
+plt.show()
+yp2_hom = MakeHomogenous(K, yp2)
+yp3_hom = MakeHomogenous(K, yp3)
 
-T_tables.addNewView(K, images[1], images[2], 2, yp2[:100], yp3[:100])
+T_tables.addNewView(K, images[1], images[2], 2, yp2_hom[:100], yp3_hom[:100], yp2[:100], yp3[:100])
 T_tables.plot()
-
-
-
 
 for img in images[:1]:
     #Select inlier 3D points T'points
