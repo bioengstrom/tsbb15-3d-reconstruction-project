@@ -154,3 +154,80 @@ class Tables:
         for i in self.T_views:
             ax.scatter(i.camera_pose.t[0], i.camera_pose.t[1], i.camera_pose.t[2], marker='^', color='black')
         plt.show()
+
+    def BundleAdjustment2(self):
+        #y1 and y2 must be homogenous coordinates and normalized
+        def distance(y1, y2):
+            return np.abs(y1-y2)
+        #Function to minimise in order to do bundle adjustment. Input should be
+        #all observations so far
+        def EpsilonBA(x0, u, v, The_table):
+            n_C = The_table.T_views.shape[0]
+            n_P = The_table.T_points.shape[0]
+
+            Rktk, xj = reshapeToCamera3DPoints(x0, n_C, n_P)
+            xj_h = np.zeros((xj.shape[0], 4), dtype='double')
+            xj_h[:,:3] = xj[:,:3]
+            xj_h[:,-1] = 1
+
+            r = np.empty(([len(u)*2]))
+            #print((ck1*xj).sum(axis=1).shape)
+            #print((ck1[0,:]*xj[0,:]).sum(axis=1))
+            #print(c)
+            #print(xj)
+            #print(ck1*xj)
+            #print(ukj)
+            #print((ck1*xj).sum(axis=1)/(ck3*xj).sum(axis=1))
+
+            for i,o in enumerate (self.T_obs):
+                c = Rktk[o.view_index]
+                c1 = c[0,:]
+                c2 = c[1,:]
+                c3 = c[2,:]
+                x = xj_h[o.point_3D_index]
+
+                r[i*2] = u[i] - (np.dot(c1,x)/np.dot(c3,x))
+                r[(i*2)+1] = v[i] - (np.dot(c2,x)/np.dot(c3,x))
+            #print(r.shape)
+            #print(len(The_table.T_obs))
+            return np.linalg.norm(r)  
+            #return np.sum(distance(yij[:,:,None],Rktk @ xj[:,:,None])**2)
+
+        #Get arrays from objects
+        #yij, Rktk, xj = self.getObsAsArrays()
+        #for o in self.T_views:
+          #  Rktk = self.T_views[o.view_index].camera_pose.GetCameraMatrix()
+        Rktk = np.empty((len(self.T_views), 3,4))
+        xj = np.empty((len(self.T_points),3))
+        yij = np.empty((len(self.T_obs),3))
+
+        for i,o in enumerate(self.T_views):
+            Rktk[i] = o.camera_pose.GetCameraMatrix()
+        for i,o in enumerate(self.T_points):
+            xj[i] = o.point
+        for i,o in enumerate(self.T_obs):
+            yij[i] = o.image_coordinates
+
+        x0 = np.hstack([Rktk.flatten(), xj.flatten()])
+        result = scipy.optimize.least_squares(EpsilonBA, x0, args=([yij[:,0],yij[:,1], self]))
+        print(result.jac.shape)
+
+        new_pose, new_points = reshapeToCamera3DPoints(result.x)
+
+        self.updateCameras3Dpoints(new_pose, new_points)
+    
+    #function that computes a suitable sparsity pattern as a function of the number of point correspondences
+    def sparsity_mask(self):
+        
+        Jc = np.zeros((len(self.T_obs)*2, (len(self.T_views)*12)))
+        Jp = np.zeros((len(self.T_obs)*2, (len(self.T_points)*3)))
+        
+        k = 0
+        for i,o in enumerate (self.T_obs):
+            Jc[k:k+1,o.view_index*12:(o.view_index*12)+12] = 1
+            Jp[k:k+1,o.point_3D_index*3:(o.point_3D_index*3)+3] = 1
+            k = k+2
+      
+        J_mask = np.hstack((Jc,Jp))
+        print(J_mask.shape)
+        return J_mask
