@@ -141,16 +141,15 @@ class Tables:
             return np.abs(y1-y2)
         #Function to minimise in order to do bundle adjustment. Input should be
         #all observations so far
-        def EpsilonBA(x0, u, v):
+        def EpsilonBA(x0, u, v, The_table):
+            n_C = The_table.T_views.shape[0]
+            n_P = The_table.T_points.shape[0]
 
-            Rktk, xj = reshapeToCamera3DPoints(x0)
-            ukj = u
-            vkj = v
-            #print(Rktk[:,:,:])
-            ck1 = Rktk[:,0,:]
-            ck2 = Rktk[:,1,:]
-            ck3 = Rktk[:,2,:]
-        
+            Rktk, xj = reshapeToCamera3DPoints(x0, n_C, n_P)
+            xj_h = np.zeros((xj.shape[0], 4), dtype='double')
+            xj_h[:,:3] = xj[:,:3]
+            xj_h[:,-1] = 1
+
             r = np.empty(([len(u)*2]))
             #print((ck1*xj).sum(axis=1).shape)
             #print((ck1[0,:]*xj[0,:]).sum(axis=1))
@@ -159,24 +158,39 @@ class Tables:
             #print(ck1*xj)
             #print(ukj)
             #print((ck1*xj).sum(axis=1)/(ck3*xj).sum(axis=1))
-            
-            res_ukj = ukj -  ((ck1*xj).sum(axis=1)/(ck3*xj).sum(axis=1))
-            res_vkj = vkj -  ((ck2*xj).sum(axis=1)/(ck3*xj).sum(axis=1))
 
-            r[::2] = res_ukj
-            r[1::2] = res_vkj
+            for i,o in enumerate (self.T_obs):
+                c = Rktk[o.view_index]
+                c1 = c[0,:]
+                c2 = c[1,:]
+                c3 = c[2,:]
+                x = xj_h[o.point_3D_index]
 
-            return r  
+                r[i*2] = u[i] - (np.dot(c1,x)/np.dot(c3,x))
+                r[(i*2)+1] = v[i] - (np.dot(c2,x)/np.dot(c3,x))
+            #print(r.shape)
+            #print(len(The_table.T_obs))
+            return np.linalg.norm(r)  
             #return np.sum(distance(yij[:,:,None],Rktk @ xj[:,:,None])**2)
 
         #Get arrays from objects
-        yij, Rktk, xj = self.getObsAsArrays()
-        for o in self.T_views:
-            Rktk = self.T_views[o.view_index].camera_pose.GetCameraMatrix()
+        #yij, Rktk, xj = self.getObsAsArrays()
+        #for o in self.T_views:
+          #  Rktk = self.T_views[o.view_index].camera_pose.GetCameraMatrix()
+        Rktk = np.empty((len(self.T_views), 3,4))
+        xj = np.empty((len(self.T_points),3))
+        yij = np.empty((len(self.T_obs),3))
+
+        for i,o in enumerate(self.T_views):
+            Rktk[i] = o.camera_pose.GetCameraMatrix()
+        for i,o in enumerate(self.T_points):
+            xj[i] = o.point
+        for i,o in enumerate(self.T_obs):
+            yij[i] = o.image_coordinates
 
         x0 = np.hstack([Rktk.flatten(), xj.flatten()])
-        result = scipy.optimize.least_squares(EpsilonBA, x0, args=([yij[:,0],yij[:,1]]))
-        #print(result.jac.shape)
+        result = scipy.optimize.least_squares(EpsilonBA, x0, args=([yij[:,0],yij[:,1], self]))
+        print(result.jac.shape)
 
         new_pose, new_points = reshapeToCamera3DPoints(result.x)
 
@@ -268,6 +282,7 @@ class Tables:
             k = k+2
       
         J_mask = np.hstack((Jc,Jp))
+        print(J_mask.shape)
         return J_mask
         
         
@@ -281,13 +296,13 @@ def MakeHomogenous(K, coord):
     coord_hom = scipy.linalg.inv(K)@coord_hom
     return coord_hom.T
 
-def reshapeToCamera3DPoints(x0):
-    ratio = int((x0.shape[0]/16)*12)
-    size = int(ratio/(3*4))
-    Rktk = x0[:ratio]
-    xj = x0[ratio:]
-    Rktk = np.reshape(Rktk, [size, 3, 4])
-    xj = np.reshape(xj, [size, 4])
+def reshapeToCamera3DPoints(x0, n_C, n_P):
+    #ratio = int((x0.shape[0]/16)*12)
+    #size = int(ratio/(3*4))
+    Rktk = x0[:n_C*12]
+    xj = x0[n_C*12:]
+    Rktk = np.reshape(Rktk, [n_C, 3, 4])
+    xj = np.reshape(xj, [n_P, 3])
     return Rktk, xj
 
 def getImages():
@@ -388,6 +403,7 @@ y2 = MakeHomogenous(K, y2p)
 E = np.matmul(np.transpose(K),np.matmul(F,K))
 #Get R and t from E
 R, t = fun.relative_camera_pose(E, y1[:,0], y2[:,0])
+
 #Get first two camera poses
 C1 = CameraPose()
 C2 = CameraPose(R,t)
@@ -412,7 +428,7 @@ T_tables.sparsity_mask()
 """
     Iterate through all images in sequence
 """
-#T_tables.BundleAdjustment()
+T_tables.BundleAdjustment()
 
 yp2, yp3 = correspondences.getCorrByIndices(1,2)
 yp2 = MakeHomogenous(K, yp2)
