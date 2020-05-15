@@ -5,6 +5,62 @@ import scipy
 from matplotlib import pyplot as plt
 from scipy.optimize import least_squares
 import math
+import scipy.io as sio
+from correspondences import Correspondences
+
+def MakeHomogenous(K, coord):
+    #Normalizing corresponding points
+    coord = coord.T
+    coord_hom = np.zeros((3,coord.shape[1]), dtype='double')
+    coord_hom[:2,:] = coord[:2,:]
+    coord_hom[-1,:] = 1
+    coord_hom = scipy.linalg.inv(K)@coord_hom
+    return coord_hom.T
+
+def getImages():
+    no_of_images = 36
+    img1 = cv.imread("../images/viff.000.ppm", cv.IMREAD_COLOR)
+    img1 = np.asarray(img1)
+
+
+    images = np.zeros([no_of_images, img1.shape[0],img1.shape[1],img1.shape[2]], dtype='int' )
+
+    for i in range(no_of_images):
+        no = str(i)
+        if i < 10:
+            no = '0' + no
+        #img1 = np.asarray(cv.cvtColor(images[0], cv.COLOR_BGR2GRAY)) # Grayscale
+        #img2 = np.asarray(cv.cvtColor(images[1], cv.COLOR_BGR2GRAY))
+        images[i] = np.asarray(cv.imread("../images/viff.0" + no + ".ppm", cv.IMREAD_COLOR))
+    return images
+
+def getCameraMatrices():
+    #Load cameras
+    cameras = sio.loadmat('imgdata/dino_Ps.mat')
+    cameras = cameras['P']
+    cameras = np.asarray(cameras.tolist())
+    return cameras
+
+def getEAndK(C, F):
+    K = np.zeros((C.shape[1],3,3))
+    R = np.zeros((C.shape[1],3,3))
+    t = np.zeros((C.shape[1],3))
+
+    #Get K, R and t for each camera
+    for i in range(C.shape[1]):
+        K, R[i,:,:], t[i,:] = camera_resectioning(C[0,i,:,:])
+
+    #Calculate essential matrix E = K.T*F*K
+    E = np.matmul(np.transpose(K),np.matmul(F,K))
+    return E, K
+def reshapeToCamera3DPoints(x0):
+    ratio = int((x0.shape[0]/16)*12)
+    size = int(ratio/(3*4))
+    Rktk = x0[:ratio]
+    xj = x0[ratio:]
+    Rktk = np.reshape(Rktk, [size, 3, 4])
+    xj = np.reshape(xj, [size, 4])
+    return Rktk, xj
 
 def matchingMatrix(roi1, roi2) :
     matrix = np.empty((len(roi1),len(roi2)))
