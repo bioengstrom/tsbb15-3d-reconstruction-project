@@ -110,6 +110,8 @@ class Tables:
             #Got through all observations seen in last view added
             for v in self.T_views[len(self.T_views)-1].observations_index:
                 o = self.T_obs[v]
+                #print(o.image_coordinates)
+                #print(y1_hom[i])
                 if np.linalg.norm(o.image_coordinates-y1_hom[i]) < 0.001:
                     #There is a corresponding 3D point x in T_points! Add y2, x to D
                     j = o.point_3D_index
@@ -152,7 +154,10 @@ class Tables:
         C1 = self.T_views[view_index_1].camera_pose
         C2 = self.T_views[view_index_2].camera_pose
 
+        R = C2.R @ C1.R.T
+        t = C2.t - C2.R @ C1.R.T @ C1.t
 
+        E = R.T
         return A_y1
 
     def plot(self):
@@ -234,21 +239,19 @@ class Tables:
 
     #function that computes a suitable sparsity pattern as a function of the number of point correspondences
     def sparsity_mask(self):
-        #n_C = The_table.T_views.shape[0]
-        #n_P = The_table.T_points.shape[0]
-
-        #m = (self.T_views)*2
-        #n =
 
         Jc = np.zeros((len(self.T_obs)*2, (len(self.T_views)*12)))
         Jp = np.zeros((len(self.T_obs)*2, (len(self.T_points)*3)))
-
+        k = 0
         for i,o in enumerate (self.T_obs):
-            Jc[i*2,o.view_index*12:(o.view_index*12)+12] = 1
-            Jp[(i*2)+1,o.point_3D_index*3:(o.point_3D_index*3)+3] = 1
+            if(o.view_index == 0):
+                continue
+            Jc[k:k+1,o.view_index*12:(o.view_index*12)+12] = 1
+            Jp[k:k+1,o.point_3D_index*3:(o.point_3D_index*3)+3] = 1
+            k = k+2
 
         J_mask = np.hstack((Jc,Jp))
-        #print(J_mask.shape)
+
         return J_mask
 
     def updateCameras3Dpoints2(self, new_pose, new_points):

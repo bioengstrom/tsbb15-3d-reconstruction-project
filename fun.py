@@ -8,6 +8,19 @@ import math
 import scipy.io as sio
 from correspondences import Correspondences
 
+def decomposeP(P):
+
+    M = P[0:3,0:3]
+    Q = np.eye(3)[::-1]
+    P_b = Q @ M @ M.T @ Q
+    K_h = Q @ np.linalg.cholesky(P_b) @ Q
+    K = K_h / K_h[2,2]
+    A = np.linalg.inv(K) @ M
+    l = (1.0/np.linalg.det(A)) ** (0.33333333)
+    R = l * A
+    t = l * np.linalg.inv(K) @ P[0:3,3]
+    return K, R, t
+
 def MakeHomogenous(K, coord):
     #Normalizing corresponding points
     coord = coord.T
@@ -156,8 +169,8 @@ def specRQ(M):
     #maybe right implementation of special rq
     U, Q = scipy.linalg.rq(M)
     if np.linalg.det(Q) == -1:
-        U[0,:] = U[0,:]*-1
-        Q[0,:] = Q[0,:]*-1
+        U[0,:] = U[0,:]*-1.0
+        Q[:,0] = Q[:,0]*-1.0
 
     return U, Q
 

@@ -25,7 +25,7 @@ C = fun.getCameraMatrices()
 #Get putative correspondence points
 correspondences = fun.Correspondences()
 y1, y2 = correspondences.getCorrByIndices(0,1)
-#y2, y3 = correspondences.getCorrByIndices(0,2)
+#y2, y3 = correspondences.getNoOfCorrespondences(0,2)
 #print(y2.shape())
 
 """
@@ -56,19 +56,27 @@ print("Initialize tables...")
 T_tables = Tables()
 
 E, K = fun.getEAndK(C, F)
+print("Vår K")
+print(K)
+
+K, R, t = fun.decomposeP(C[0,0,:,:])
+print("Inte vår K")
+print(K)
+
+E = np.matmul(np.transpose(K),np.matmul(F,K))
 
 #Get R and t from E
 R, t = fun.relative_camera_pose(E, y1[0], y2[0])
-result = cv.decomposeProjectionMatrix(C[0,0,:,:])
-result = np.array(result)
-K = result[0]
-R = result[1]
-t = result[2]
-t = t[:3,0]
+"""
+print(K.shape)
+print(R.shape)
+print(t.shape)
+"""
 
 #Make the image coordinates homogenous
 y1 = fun.MakeHomogenous(K, y1p)
 y2 = fun.MakeHomogenous(K, y2p)
+#print(y1)
 
 #Get first two camera poses
 C1 = CameraPose()
@@ -103,8 +111,7 @@ T_tables.plot()
 """
 
 #for i in range(images.shape[0]-1):
-for i in range(1,2,1):
-
+for i in range(1,5,1):
     #Select inlier 3D points T'points
     """
         BA: Bundle Adjustment of all images so far
@@ -125,6 +132,7 @@ for i in range(1,2,1):
     """
 
     yp2, yp3 = correspondences.getCorrByIndices(i,i+1)
+    #print(yp2.shape)
     lab3.show_corresp(images[i], images[i+1], yp2.T, yp3.T)
     plt.show()
     yp2_hom = fun.MakeHomogenous(K, yp2)
@@ -135,20 +143,18 @@ for i in range(1,2,1):
         EXT2: Find 2D<->3D correspondences. Algorithm 21.2
         EXT3: PnP -> R,t of new view and consensus set C
     """
-    """
-    A_y1, A_y2 = T_tables.addNewView(K, images[1], images[2], 2, yp2_hom[:100], yp3_hom[:100], yp2[:100], yp3[:100])
+
+    A_y1, A_y2 = T_tables.addNewView(K, images[1], images[2], 2, yp2_hom, yp3_hom, yp2, yp3)
     T_tables.plot()
-    mask = T_tables.sparsity_mask()
-    plt.imshow(mask)
     plt.show()
-    """
+
 
     """
         EXT4: Extend table with new row and insert image points in C. Algorithm 21.3
         EXT5: For each putative correspondence that satisfies E, extend table with column
     """
     #Add new 3D points
-    #T_tables.addNewPoints(A_y1, A_y2, i, i+1)
+    T_tables.addNewPoints(A_y1, A_y2, i, i+1)
 
 
 
