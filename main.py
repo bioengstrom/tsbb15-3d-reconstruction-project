@@ -18,6 +18,7 @@ import fun as fun
     Load data
 """
 #Get images and camera matrices
+print("Get images, camera matrices and correspondences...")
 images = fun.getImages()
 C = fun.getCameraMatrices()
 
@@ -32,6 +33,7 @@ y1, y2 = correspondences.getCorrByIndices(0,1)
 #y1 and y2 are the consensus set C
 #Fy1y2 = fun.f_matrix(images[0], images[1], y1, y2)
 #np.save("Fmatrix", Fy1y2)
+print("Initialize SfM pipeline...")
 Fy1y2 = np.load("Fmatrix.npy", allow_pickle=True)
 
 F = Fy1y2[0]
@@ -47,6 +49,7 @@ plt.show()
     INIT2: Get E = R,t from the two intial views
 """
 #Declare the tables to store the data
+print("Initialize tables...")
 T_tables = Tables()
 
 E, K = fun.getEAndK(C, F)
@@ -78,7 +81,7 @@ for i in range(y1.shape[0]):
     T_tables.addObs(y1[i], view_index_1, point_index)
     T_tables.addObs(y2[i], view_index_2, point_index)
 
-T_tables.sparsity_mask()
+#T_tables.sparsity_mask()
 """
     Iterate through all images in sequence
 """
@@ -88,7 +91,7 @@ T_tables.plot()
 
 
 #for i in range(images.shape[0]-1):
-for i in range(3):
+for i in range(1):
     #Select inlier 3D points T'points
 
     """
@@ -103,8 +106,6 @@ for i in range(3):
     #Get corresponding observations y1 and y2 from T_obs and their camera poses C1 and C2 from T_views.
     #Triangulate x from y1, y2, C1 and C2. Update 3D point in T_points
     #Remove potential outliers from T_points after bundle adjustment
-
-
 
     """
         EXT1: Choose new view C

@@ -81,7 +81,7 @@ class Tables:
         x0 = np.hstack([Rktk.flatten(), xj.flatten()])
         result = least_squares(EpsilonBA, x0, args=([yij]))
         new_pose, new_points = fun.reshapeToCamera3DPoints(result.x)
-        print(new_points.shape)
+        
         self.updateCameras3Dpoints(new_pose, new_points[:,:3])
 
     def updateCameras3Dpoints(self, new_pose, new_points):
@@ -121,9 +121,7 @@ class Tables:
                     #No correspondence found - add to A
                     A_y1 = np.concatenate((A_y1, [y1[i]]), axis = 0)
                     A_y2 = np.concatenate((A_y2, [y2[i]]), axis = 0)
-        print(D_3Dpoints.shape)
-        print(D_imgcoords.shape)
-        print(x_i.shape)
+
         print("Doing ransac pnp with n many elements:")
         print(D_3Dpoints.shape[0])
         #Pnp Algorithm return consensus set C of correspondences that agree with the estimated camera pose
