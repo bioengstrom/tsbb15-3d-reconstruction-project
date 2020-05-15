@@ -80,7 +80,7 @@ class Tables:
         x0 = np.hstack([Rktk.flatten(), xj.flatten()])
         result = least_squares(EpsilonBA, x0, args=([yij]))
         new_pose, new_points = fun.reshapeToCamera3DPoints(result.x)
-        print(new_points.shape)
+        
         self.updateCameras3Dpoints(new_pose, new_points[:,:3])
 
     def updateCameras3Dpoints(self, new_pose, new_points):
@@ -120,9 +120,7 @@ class Tables:
                     #No correspondence found - add to A
                     A_y1 = np.concatenate((A_y1, [y1[i]]), axis = 0)
                     A_y2 = np.concatenate((A_y2, [y2[i]]), axis = 0)
-        print(D_3Dpoints.shape)
-        print(D_imgcoords.shape)
-        print(x_i.shape)
+
         print("Doing ransac pnp with n many elements:")
         print(D_3Dpoints.shape[0])
         #Pnp Algorithm return consensus set C of correspondences that agree with the estimated camera pose
@@ -194,7 +192,7 @@ class Tables:
                 r[(i*2)+1] = v[i] - (np.dot(c2,x)/np.dot(c3,x))
             #print(r.shape)
             #print(len(The_table.T_obs))
-            return np.linalg.norm(r)  
+            return np.linalg.norm(r)
             #return np.sum(distance(yij[:,:,None],Rktk @ xj[:,:,None])**2)
 
         #Get arrays from objects
@@ -219,19 +217,19 @@ class Tables:
         new_pose, new_points = reshapeToCamera3DPoints(result.x)
 
         self.updateCameras3Dpoints(new_pose, new_points)
-    
+
     #function that computes a suitable sparsity pattern as a function of the number of point correspondences
     def sparsity_mask(self):
-        
+
         Jc = np.zeros((len(self.T_obs)*2, (len(self.T_views)*12)))
         Jp = np.zeros((len(self.T_obs)*2, (len(self.T_points)*3)))
-        
+
         k = 0
         for i,o in enumerate (self.T_obs):
             Jc[k:k+1,o.view_index*12:(o.view_index*12)+12] = 1
             Jp[k:k+1,o.point_3D_index*3:(o.point_3D_index*3)+3] = 1
             k = k+2
-      
+
         J_mask = np.hstack((Jc,Jp))
         print(J_mask.shape)
         return J_mask
