@@ -82,8 +82,9 @@ T_tables.sparsity_mask()
 """
     Iterate through all images in sequence
 """
-T_tables.BundleAdjustment()
-
+T_tables.plot()
+T_tables.BundleAdjustment2()
+T_tables.plot()
 
 
 #for i in range(images.shape[0]-1):

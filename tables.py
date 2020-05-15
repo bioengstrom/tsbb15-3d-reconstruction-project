@@ -6,6 +6,7 @@ from scipy.optimize import least_squares
 from pnp import p3p
 import cv2 as cv
 import fun as fun
+from scipy.sparse import lil_matrix
 
 class Tables:
 
@@ -169,7 +170,7 @@ class Tables:
             n_C = The_table.T_views.shape[0]
             n_P = The_table.T_points.shape[0]
 
-            Rktk, xj = reshapeToCamera3DPoints(x0, n_C, n_P)
+            Rktk, xj = fun.reshapeToCamera3DPoints2(x0, n_C, n_P)
             xj_h = np.zeros((xj.shape[0], 4), dtype='double')
             xj_h[:,:3] = xj[:,:3]
             xj_h[:,-1] = 1
@@ -192,9 +193,10 @@ class Tables:
 
                 r[i*2] = u[i] - (np.dot(c1,x)/np.dot(c3,x))
                 r[(i*2)+1] = v[i] - (np.dot(c2,x)/np.dot(c3,x))
-            #print(r.shape)
+            
             #print(len(The_table.T_obs))
-            return np.linalg.norm(r)  
+            #print(r.shape)
+            return r.ravel()
             #return np.sum(distance(yij[:,:,None],Rktk @ xj[:,:,None])**2)
 
         #Get arrays from objects
@@ -212,26 +214,42 @@ class Tables:
         for i,o in enumerate(self.T_obs):
             yij[i] = o.image_coordinates
 
-        x0 = np.hstack([Rktk.flatten(), xj.flatten()])
-        result = scipy.optimize.least_squares(EpsilonBA, x0, args=([yij[:,0],yij[:,1], self]))
-        print(result.jac.shape)
+        x0 = np.hstack([Rktk.ravel(), xj.ravel()])
+        #print(x0.shape)
+        result = least_squares(EpsilonBA, x0, args=([yij[:,0],yij[:,1], self]), jac_sparsity=self.sparsity_mask())
+        #print(result.jac.shape)
 
-        new_pose, new_points = reshapeToCamera3DPoints(result.x)
+        n_C = self.T_views.shape[0]
+        n_P = self.T_points.shape[0]
+        new_pose, new_points = fun.reshapeToCamera3DPoints2(result.x, n_C, n_P)
+        #print(new_pose.shape)
+        #print(new_points.shape)
 
-        self.updateCameras3Dpoints(new_pose, new_points)
+        self.updateCameras3Dpoints2(new_pose, new_points)
     
     #function that computes a suitable sparsity pattern as a function of the number of point correspondences
     def sparsity_mask(self):
-        
+        #n_C = The_table.T_views.shape[0]
+        #n_P = The_table.T_points.shape[0]
+
+        #m = (self.T_views)*2
+        #n = 
+
         Jc = np.zeros((len(self.T_obs)*2, (len(self.T_views)*12)))
         Jp = np.zeros((len(self.T_obs)*2, (len(self.T_points)*3)))
         
-        k = 0
         for i,o in enumerate (self.T_obs):
-            Jc[k:k+1,o.view_index*12:(o.view_index*12)+12] = 1
-            Jp[k:k+1,o.point_3D_index*3:(o.point_3D_index*3)+3] = 1
-            k = k+2
+            Jc[i*2,o.view_index*12:(o.view_index*12)+12] = 1
+            Jp[(i*2)+1,o.point_3D_index*3:(o.point_3D_index*3)+3] = 1
       
         J_mask = np.hstack((Jc,Jp))
-        print(J_mask.shape)
+        #print(J_mask.shape)
         return J_mask
+    
+    def updateCameras3Dpoints2(self, new_pose, new_points):
+        for i, o in enumerate(self.T_views):
+            t = new_pose[i,:,3]
+            R = new_pose[i,:3,:3]
+            o.camera_pose = CameraPose(R,t)
+        for i, o in enumerate(self.T_points):
+            o.point = new_points[i]
