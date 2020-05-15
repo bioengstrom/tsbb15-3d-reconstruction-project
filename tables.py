@@ -27,8 +27,8 @@ class Tables:
     def addObs(self,coord, view_index, point_index):
         new_obs = np.array([Observation(coord, view_index, point_index)])
         self.T_obs = np.append(self.T_obs, new_obs)
-        self.T_views[view_index].observations_index = self.T_obs.size - 1
-        self.T_points[point_index].observations_index = self.T_obs.size - 1
+        self.T_views[view_index].observations_index = np.concatenate((self.T_views[view_index].observations_index, [self.T_obs.size - 1]), axis = 0)
+        self.T_points[point_index].observations_index = np.concatenate((self.T_points[point_index].observations_index, [self.T_obs.size - 1]), axis = 0)
 
     def __str__(self):
         print_array = np.vectorize(str, otypes=[object])
@@ -80,7 +80,7 @@ class Tables:
         x0 = np.hstack([Rktk.flatten(), xj.flatten()])
         result = least_squares(EpsilonBA, x0, args=([yij]))
         new_pose, new_points = fun.reshapeToCamera3DPoints(result.x)
-        
+
         self.updateCameras3Dpoints(new_pose, new_points[:,:3])
 
     def updateCameras3Dpoints(self, new_pose, new_points):
@@ -106,8 +106,10 @@ class Tables:
         A_y2 = np.zeros([0,2])
 
         for i in range(y1.shape[0]):
-            for o in self.T_obs:
-                if np.linalg.norm(o.image_coordinates-y1_hom[i]) < 0.01:
+            #Got through all observations seen in last view added
+            for v in self.T_views[len(self.T_views)-1].observations_index:
+                o = self.T_obs[v]
+                if np.linalg.norm(o.image_coordinates-y1_hom[i]) < 0.001:
                     #There is a corresponding 3D point x in T_points! Add y2, x to D
                     j = o.point_3D_index
                     x_i = np.concatenate((x_i, [j]), axis = 0)
@@ -145,8 +147,12 @@ class Tables:
         #return a set of putative correspondences between the images so far without 3D points
         return A_y1, A_y2
 
-    def addNewPoints(self, A, view_index_1, view_index_2):
-        return A
+    def addNewPoints(self, A_y1, A_y2, view_index_1, view_index_2):
+        C1 = self.T_views[view_index_1].camera_pose
+        C2 = self.T_views[view_index_2].camera_pose
+
+
+        return A_y1
 
     def plot(self):
         fig = plt.figure()

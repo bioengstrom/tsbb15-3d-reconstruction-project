@@ -86,11 +86,6 @@ for i in range(y1.shape[0]):
     Iterate through all images in sequence
 """
 
-print("Bundle adjustment...")
-T_tables.BundleAdjustment()
-
-
-
 #for i in range(images.shape[0]-1):
 for i in range(1):
     #Select inlier 3D points T'points
@@ -98,7 +93,8 @@ for i in range(1):
     """
         BA: Bundle Adjustment of all images so far
     """
-
+    #print("Bundle adjustment...")
+    #T_tables.BundleAdjustment()
 
     """
         WASH1: Remove bad 3D points. Re-triangulate & Remove outliers
@@ -122,14 +118,14 @@ for i in range(1):
         EXT2: Find 2D<->3D correspondences. Algorithm 21.2
         EXT3: PnP -> R,t of new view and consensus set C
     """
-    T_tables.addNewView(K, images[1], images[2], 2, yp2_hom[:100], yp3_hom[:100], yp2[:100], yp3[:100])
+    A_y1, A_y2 = T_tables.addNewView(K, images[1], images[2], 2, yp2_hom[:100], yp3_hom[:100], yp2[:100], yp3[:100])
     T_tables.plot()
     """
         EXT4: Extend table with new row and insert image points in C. Algorithm 21.3
         EXT5: For each putative correspondence that satisfies E, extend table with column
     """
     #Add new 3D points
-    #T_tables.addNewPoints()
+    #T_tables.addNewPoints(A_y1, A_y2, i, i+1)
 
     """
 
