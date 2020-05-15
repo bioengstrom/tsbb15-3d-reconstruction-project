@@ -4,7 +4,6 @@ import scipy.cluster
 import numpy as np
 import fun
 import cv2 as cv
-import scipy.io as sio
 import lab3
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
@@ -13,60 +12,18 @@ from pnp import p3p
 from help_classes import CameraPose, Point_3D, Observation, View
 from tables import Tables
 from correspondences import Correspondences
-
-def MakeHomogenous(K, coord):
-    #Normalizing corresponding points
-    coord = coord.T
-    coord_hom = np.zeros((3,coord.shape[1]), dtype='double')
-    coord_hom[:2,:] = coord[:2,:]
-    coord_hom[-1,:] = 1
-    coord_hom = scipy.linalg.inv(K)@coord_hom
-    return coord_hom.T
-
-def reshapeToCamera3DPoints(x0, n_C, n_P):
-    #ratio = int((x0.shape[0]/16)*12)
-    #size = int(ratio/(3*4))
-    Rktk = x0[:n_C*12]
-    xj = x0[n_C*12:]
-    Rktk = np.reshape(Rktk, [n_C, 3, 4])
-    xj = np.reshape(xj, [n_P, 3])
-    return Rktk, xj
-
-def getImages():
-    no_of_images = 36
-    img1 = cv.imread("../images/viff.000.ppm", cv.IMREAD_COLOR)
-    img1 = np.asarray(img1)
-
-
-    images = np.zeros([no_of_images, img1.shape[0],img1.shape[1],img1.shape[2]], dtype='int' )
-
-    for i in range(no_of_images):
-        no = str(i)
-        if i < 10:
-            no = '0' + no
-        #img1 = np.asarray(cv.cvtColor(images[0], cv.COLOR_BGR2GRAY)) # Grayscale
-        #img2 = np.asarray(cv.cvtColor(images[1], cv.COLOR_BGR2GRAY))
-        images[i] = np.asarray(cv.imread("../images/viff.0" + no + ".ppm", cv.IMREAD_COLOR))
-    return images
-
-def getCameraMatrices():
-    #Load cameras
-    cameras = sio.loadmat('imgdata/dino_Ps.mat')
-    cameras = cameras['P']
-    return cameras
+import fun as fun
 
 """
     Load data
 """
 #Get images and camera matrices
-images = getImages()
-cameras = getCameraMatrices()
+images = fun.getImages()
+C = fun.getCameraMatrices()
 
 #Get putative correspondence points
-correspondences = Correspondences()
+correspondences = fun.Correspondences()
 y1, y2 = correspondences.getCorrByIndices(0,1)
-
-
 
 """
     INIT1: Choose initial views I1 & I2
@@ -92,21 +49,12 @@ plt.show()
 #Declare the tables to store the data
 T_tables = Tables()
 
-C = np.asarray(cameras.tolist())
-K = np.zeros((C.shape[1],3,3))
-R = np.zeros((C.shape[1],3,3))
-t = np.zeros((C.shape[1],3))
-
-#Get K, R and t for each camera
-for i in range(C.shape[1]):
-    K, R[i,:,:], t[i,:] = fun.camera_resectioning(C[0,i,:,:])
+E, K = fun.getEAndK(C, F)
 
 #Make the image coordinates homogenous
-y1 = MakeHomogenous(K, y1p)
-y2 = MakeHomogenous(K, y2p)
+y1 = fun.MakeHomogenous(K, y1p)
+y2 = fun.MakeHomogenous(K, y2p)
 
-#Calculate essential matrix E = K.T*F*K
-E = np.matmul(np.transpose(K),np.matmul(F,K))
 #Get R and t from E
 R, t = fun.relative_camera_pose(E, y1[:,0], y2[:,0])
 
@@ -138,7 +86,8 @@ T_tables.BundleAdjustment()
 
 
 
-for i in range(images.shape[0]-1):
+#for i in range(images.shape[0]-1):
+for i in range(3):
     #Select inlier 3D points T'points
 
     """
@@ -163,8 +112,8 @@ for i in range(images.shape[0]-1):
     yp2, yp3 = correspondences.getCorrByIndices(i,i+1)
     lab3.show_corresp(images[i], images[i+1], yp2.T, yp3.T)
     plt.show()
-    yp2_hom = MakeHomogenous(K, yp2)
-    yp3_hom = MakeHomogenous(K, yp3)
+    yp2_hom = fun.MakeHomogenous(K, yp2)
+    yp3_hom = fun.MakeHomogenous(K, yp3)
 
     """
         EXT2: Find 2D<->3D correspondences. Algorithm 21.2
@@ -174,11 +123,13 @@ for i in range(images.shape[0]-1):
     T_tables.plot()
     """
         EXT4: Extend table with new row and insert image points in C. Algorithm 21.3
+        EXT5: For each putative correspondence that satisfies E, extend table with column
     """
     #Add new 3D points
+    #T_tables.addNewPoints()
 
     """
-        EXT5: For each putative correspondence that satisfies E, extend table with column
+
     """
 
     """

@@ -5,6 +5,7 @@ from mpl_toolkits.mplot3d import Axes3D
 from scipy.optimize import least_squares
 from pnp import p3p
 import cv2 as cv
+import fun as fun
 
 class Tables:
 
@@ -70,17 +71,17 @@ class Tables:
         #Function to minimise in order to do bundle adjustment. Input should be
         #all observations so far
         def EpsilonBA(x0, yij):
-            Rktk, xj = reshapeToCamera3DPoints(x0)
+            Rktk, xj = fun.reshapeToCamera3DPoints(x0)
             return np.sum(distance(yij[:,:,None],Rktk @ xj[:,:,None])**2)
 
         #Get arrays from objects
         yij, Rktk, xj = self.getObsAsArrays()
 
         x0 = np.hstack([Rktk.flatten(), xj.flatten()])
-        result = scipy.optimize.least_squares(EpsilonBA, x0, args=([yij]))
-        new_pose, new_points = reshapeToCamera3DPoints(result.x)
-
-        self.updateCameras3Dpoints(new_pose, new_points)
+        result = least_squares(EpsilonBA, x0, args=([yij]))
+        new_pose, new_points = fun.reshapeToCamera3DPoints(result.x)
+        print(new_points.shape)
+        self.updateCameras3Dpoints(new_pose, new_points[:,:3])
 
     def updateCameras3Dpoints(self, new_pose, new_points):
 
@@ -145,6 +146,9 @@ class Tables:
 
         #return a set of putative correspondences between the images so far without 3D points
         return A_y1, A_y2
+
+    def addNewPoints(self, A, view_index_1, view_index_2):
+        return A
 
     def plot(self):
         fig = plt.figure()
