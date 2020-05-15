@@ -10,171 +10,113 @@ import scipy.io as sio
 import lab3
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
+from scipy.optimize import least_squares
+from pnp import p3p
+from help_classes import CameraPose, Point_3D, Observation, View
+from tables import Tables
+from correspondences import Correspondences
 
-class CameraPose:
-    def __init__(self, R = np.identity(3), t = np.array([0.0, 0.0, 0.0])):
-        self.R = R
-        self.t = t
+def MakeHomogenous(K, coord):
+    #Normalizing corresponding points
+    coord = coord.T
+    coord_hom = np.zeros((3,coord.shape[1]), dtype='double')
+    coord_hom[:2,:] = coord[:2,:]
+    coord_hom[-1,:] = 1
+    coord_hom = scipy.linalg.inv(K)@coord_hom
+    return coord_hom.T
 
-    def __str__(self):
-        the_print = "R: "
-        the_print += str(self.R)
-        the_print += " t: "
-        the_print += str(self.t)
+def reshapeToCamera3DPoints(x0):
+    ratio = int((x0.shape[0]/16)*12)
+    size = int(ratio/(3*4))
+    Rktk = x0[:ratio]
+    xj = x0[ratio:]
+    Rktk = np.reshape(Rktk, [size, 3, 4])
+    xj = np.reshape(xj, [size, 4])
+    return Rktk, xj
 
-        return the_print
+def getImages():
+    no_of_images = 36
+    img1 = cv.imread("../images/viff.000.ppm", cv.IMREAD_COLOR)
+    img1 = np.asarray(img1)
 
-    def GetCameraMatrix(self):
-        C1t1R1 = np.zeros((3,4), dtype='double')
-        C1t1R1[:,-1] = self.t
-        C1t1R1[:3,:3] = self.R
 
-        return C1t1R1
+    images = np.zeros([no_of_images, img1.shape[0],img1.shape[1],img1.shape[2]], dtype='int' )
 
-class Point_3D:
-    def __init__(self, point):
-        self.point = point
-        self.observations_index = np.array([], dtype = 'int')
+    for i in range(no_of_images):
+        no = str(i)
+        if i < 10:
+            no = '0' + no
+        #img1 = np.asarray(cv.cvtColor(images[0], cv.COLOR_BGR2GRAY)) # Grayscale
+        #img2 = np.asarray(cv.cvtColor(images[1], cv.COLOR_BGR2GRAY))
+        images[i] = np.asarray(cv.imread("../images/viff.0" + no + ".ppm", cv.IMREAD_COLOR))
+    return images
 
-    def __str__(self):
-        the_print = "3D point: "
-        the_print += str(self.point)
-        the_print += " Observation index: "
-        the_print += str(self.observations_index)
+def getCameraMatrices():
+    #Load cameras
+    cameras = sio.loadmat('imgdata/dino_Ps.mat')
+    cameras = cameras['P']
+    return cameras
 
-        return the_print
-
-class Observation:
-    def __init__(self, image_coordinates, view_index, point_3D_index):
-        self.image_coordinates = image_coordinates
-        self.view_index = view_index
-        self.point_3D_index = point_3D_index
-    def __str__(self):
-        the_print = "OBSERVATION: "
-        the_print += "Image coords: "
-        the_print += str(self.image_coordinates)
-        the_print += " View index: "
-        the_print += str(self.view_index)
-        the_print += " 3D point index "
-        the_print += str(self.point_3D_index)
-
-        return the_print
-
-class View:
-    def __init__(self, image, camera_pose):
-        self.image = image
-        self.camera_pose = camera_pose
-        self.observations_index = np.array([], dtype = 'int')
-
-    def __str__(self):
-        the_print = "VIEW: "
-        the_print += "Image index: "
-        the_print += str(self.image)
-        the_print += " Camera pose: "
-        the_print += str(self.camera_pose)
-        the_print += " Observations table "
-        the_print += str(self.observations_index)
-
-        return the_print
-
-class Tables:
-
-    def __init__(self):
-        self.T_obs = np.array([], dtype = 'object')
-        self.T_views = np.array([], dtype = 'object')
-        self.T_points = np.array([], dtype = 'object')
-
-    def addView(self,image, pose):
-        new_view = np.array([View(image, pose)])
-        self.T_views = np.append(self.T_views, new_view)
-        return self.T_views.size-1 #Return index to added item
-
-    def addPoint(self,coord):
-        new_point = np.array([Point_3D(coord)])
-        self.T_points = np.append(self.T_points, new_point)
-        return self.T_points.size-1 #Return index to added item
-
-    def addObs(self,coord, view_index, point_index):
-        new_obs = np.array([Observation(coord, view_index, point_index)])
-        self.T_obs = np.append(self.T_obs, new_obs)
-        self.T_views[view_index].observations_index = self.T_obs.size - 1
-        self.T_points[point_index].observations_index = self.T_obs.size - 1
-
-    def __str__(self):
-        print_array = np.vectorize(str, otypes=[object])
-        the_print = "TABLES: \n"
-        the_print += "3D points table: \n"
-        the_print += str(print_array(self.T_points))
-        the_print += "\nView table\n"
-        the_print += str(print_array(self.T_views))
-        the_print += "\nObservations table\n"
-        the_print += str(print_array(self.T_obs))
-
-        return the_print
-
-    def plot(self):
-        fig = plt.figure()
-        ax = fig.add_subplot(111, projection='3d')
-        for i in self.T_points:
-            ax.scatter(i.point[0], i.point[1], i.point[2], marker='o', color='orange')
-        for i in self.T_views:
-            ax.scatter(i.camera_pose.t[0], i.camera_pose.t[1], i.camera_pose.t[2], marker='^', color='black')
-        plt.show()
 """
     Load data
 """
-no_of_images = 36
-img1 = cv.imread("images/viff.000.ppm", cv.IMREAD_COLOR)
-img1 = np.asarray(img1)
+#Get images and camera matrices
+images = getImages()
+cameras = getCameraMatrices()
+
+#Get putative correspondence points
+correspondences = Correspondences()
+y1, y2 = correspondences.getCorrByIndices(0,1)
 
 
-images = np.zeros([no_of_images, img1.shape[0],img1.shape[1],img1.shape[2]], dtype='int' )
-
-for i in range(no_of_images):
-    no = str(i)
-    if i < 10:
-        no = '0' + no
-    #img1 = np.asarray(cv.cvtColor(images[0], cv.COLOR_BGR2GRAY)) # Grayscale
-    #img2 = np.asarray(cv.cvtColor(images[1], cv.COLOR_BGR2GRAY))
-    images[i] = np.asarray(cv.imread("images/viff.0" + no + ".ppm", cv.IMREAD_COLOR))
-
-Dino_36C = sio.loadmat('imgdata/dino_Ps.mat')
-Dino_36C = Dino_36C['P']
 
 """
     INIT1: Choose initial views I1 & I2
 """
 #Naive: choose 2 first img
 #y1 and y2 are the consensus set C
-#Fy1y2 = fun.f_matrix(images[0], images[1])
+#Fy1y2 = fun.f_matrix(images[0], images[1], y1, y2)
 #np.save("Fmatrix", Fy1y2)
 Fy1y2 = np.load("Fmatrix.npy", allow_pickle=True)
 
 F = Fy1y2[0]
-y1 = Fy1y2[1]
-y2 = Fy1y2[2]
+y1p = Fy1y2[1].T
+y2p = Fy1y2[2].T
+
+#Show the image with interest points
+plt.imshow(images[0])
+plt.scatter(y1p[:,0], y1p[:,1], color='orange')
+plt.show()
 
 """
     INIT2: Get E = R,t from the two intial views
 """
-
+#Declare the tables to store the data
 T_tables = Tables()
 
-C = np.asarray(Dino_36C.tolist())
+C = np.asarray(cameras.tolist())
 K = np.zeros((C.shape[1],3,3))
 R = np.zeros((C.shape[1],3,3))
 t = np.zeros((C.shape[1],3))
 
+#Get K, R and t for each camera
 for i in range(C.shape[1]):
     K, R[i,:,:], t[i,:] = fun.camera_resectioning(C[0,i,:,:])
 
-#Calculate E = K.T*F*K
+#Make the image coordinates homogenous
+y1 = MakeHomogenous(K, y1p)
+y2 = MakeHomogenous(K, y2p)
+
+#Calculate essential matrix E = K.T*F*K
 E = np.matmul(np.transpose(K),np.matmul(F,K))
-R_est, t_est = fun.relative_camera_pose(E, y1[:,0], y2[:,0])
+#Get R and t from E
+R, t = fun.relative_camera_pose(E, y1[:,0], y2[:,0])
+#Get first two camera poses
 C1 = CameraPose()
 C2 = CameraPose(R_est,t_est)
 
-#Add index 0 and C1 for image 1 and first camera pose. Same for second image and C2
+#Add the first two Views to the tables.
+#Index 0 and C1 for image 1 and first camera pose. Same for second image and C2
 view_index_1 = T_tables.addView(0,C1)
 view_index_2 = T_tables.addView(1,C2)
 
@@ -182,50 +124,68 @@ view_index_2 = T_tables.addView(1,C2)
     INIT3: Triangulate points.
 """
 
-for i in range(y1.shape[1]):
+for i in range(y1.shape[0]):
     #Triangulate points and add to tables
-    new_3D_point = lab3.triangulate_optimal(C1.GetCameraMatrix(), C2.GetCameraMatrix(), y1[:,i], y2[:,i])
+    new_3D_point = lab3.triangulate_optimal(C1.GetCameraMatrix(), C2.GetCameraMatrix(), y1[i], y2[i])
     point_index = T_tables.addPoint(new_3D_point)
-    T_tables.addObs(y1[:,i], view_index_1, point_index)
-    T_tables.addObs(y2[:,i], view_index_2, point_index)
+    T_tables.addObs(y1[i], view_index_1, point_index)
+    T_tables.addObs(y2[i], view_index_2, point_index)
 
-#print(T_tables)
 T_tables.plot()
 
 """
     Iterate through all images in sequence
 """
+#T_tables.BundleAdjustment()
 
-"""
-    BA: Bundle Adjustment of all images so far
-"""
-"""
-    WASH1: Remove bad 3D points
-"""
 
-"""
-    EXT1: Choose new view C
-"""
 
-"""
-    EXT2: Find 2D<->3D correspondences
-"""
+for i in range(images.shape[0]-1):
+    #Select inlier 3D points T'points
 
-"""
-    EXT3: PnP -> R,t of new view and consensus set C
-"""
+    """
+        BA: Bundle Adjustment of all images so far
+    """
 
-"""
-    EXT4: Extend table with new row and insert image points in C
-"""
 
-"""
-    EXT5: For each putative correspondence that satisfies E, extend table with column
-"""
+    """
+        WASH1: Remove bad 3D points. Re-triangulate & Remove outliers
+    """
+    #For each 3D points in T points that is not in T'points
+    #Get corresponding observations y1 and y2 from T_obs and their camera poses C1 and C2 from T_views.
+    #Triangulate x from y1, y2, C1 and C2. Update 3D point in T_points
+    #Remove potential outliers from T_points after bundle adjustment
 
-"""
-    WASH2: Check elements not in C and remove either 3D points or observation
-"""
+
+
+    """
+        EXT1: Choose new view C
+    """
+
+    yp2, yp3 = correspondences.getCorrByIndices(i,i+1)
+    lab3.show_corresp(images[i], images[i+1], yp2.T, yp3.T)
+    plt.show()
+    yp2_hom = MakeHomogenous(K, yp2)
+    yp3_hom = MakeHomogenous(K, yp3)
+
+    """
+        EXT2: Find 2D<->3D correspondences. Algorithm 21.2
+        EXT3: PnP -> R,t of new view and consensus set C
+    """
+    T_tables.addNewView(K, images[1], images[2], 2, yp2_hom[:100], yp3_hom[:100], yp2[:100], yp3[:100])
+    T_tables.plot()
+    """
+        EXT4: Extend table with new row and insert image points in C. Algorithm 21.3
+    """
+    #Add new 3D points
+
+    """
+        EXT5: For each putative correspondence that satisfies E, extend table with column
+    """
+
+    """
+        WASH2: Check elements not in C and remove either 3D points or observation
+    """
 
 """
     After last iteration: Bundle Adjustment if outliers were removed since last BA
