@@ -85,7 +85,7 @@ class Tables:
         self.updateCameras3Dpoints(new_pose, new_points[:,:3])
 
     def updateCameras3Dpoints(self, new_pose, new_points):
-
+        print(new_pose[0,:,3].shape)
         for i, o in enumerate(self.T_obs):
             t = new_pose[i,:,3]
             R = new_pose[i,:3,:3]
@@ -137,7 +137,7 @@ class Tables:
         consensus_x_i = x_i[inliers[:,0]]
 
         #Set Camera pose C = (R | t) for img2
-        C = CameraPose(R, t)
+        C = CameraPose(R, t[:,0])
 
         #Add new view to T_views
         view_index = self.addView(img_index, C)
@@ -161,7 +161,8 @@ class Tables:
         for i in self.T_points:
             ax.scatter(i.point[0], i.point[1], i.point[2], marker='o', color='orange')
         for i in self.T_views:
-            ax.scatter(i.camera_pose.t[0], i.camera_pose.t[1], i.camera_pose.t[2], marker='^', color='black')
+            position = -1.0*(i.camera_pose.R.T @ i.camera_pose.t)
+            ax.scatter(position[0], position[1], position[2], marker='^', color='black')
         plt.show()
 
     def BundleAdjustment2(self):
@@ -197,7 +198,7 @@ class Tables:
 
                 r[i*2] = u[i] - (np.dot(c1,x)/np.dot(c3,x))
                 r[(i*2)+1] = v[i] - (np.dot(c2,x)/np.dot(c3,x))
-            
+
             #print(len(The_table.T_obs))
             #print(r.shape)
             return r.ravel()
@@ -220,7 +221,7 @@ class Tables:
 
         x0 = np.hstack([Rktk.ravel(), xj.ravel()])
         #print(x0.shape)
-        result = least_squares(EpsilonBA, x0, args=([yij[:,0],yij[:,1], self]), jac_sparsity=self.sparsity_mask())
+        result = least_squares(EpsilonBA, x0, args=([yij[:,0],yij[:,1], self]), jac_sparsity=self.sparsity_mask(), verbose=2, x_scale='jac', ftol=1e-4, method='trf')
         #print(result.jac.shape)
 
         n_C = self.T_views.shape[0]
@@ -230,26 +231,26 @@ class Tables:
         #print(new_points.shape)
 
         self.updateCameras3Dpoints2(new_pose, new_points)
-    
+
     #function that computes a suitable sparsity pattern as a function of the number of point correspondences
     def sparsity_mask(self):
         #n_C = The_table.T_views.shape[0]
         #n_P = The_table.T_points.shape[0]
 
         #m = (self.T_views)*2
-        #n = 
+        #n =
 
         Jc = np.zeros((len(self.T_obs)*2, (len(self.T_views)*12)))
         Jp = np.zeros((len(self.T_obs)*2, (len(self.T_points)*3)))
-        
+
         for i,o in enumerate (self.T_obs):
             Jc[i*2,o.view_index*12:(o.view_index*12)+12] = 1
             Jp[(i*2)+1,o.point_3D_index*3:(o.point_3D_index*3)+3] = 1
-      
+
         J_mask = np.hstack((Jc,Jp))
         #print(J_mask.shape)
         return J_mask
-    
+
     def updateCameras3Dpoints2(self, new_pose, new_points):
         for i, o in enumerate(self.T_views):
             t = new_pose[i,:,3]

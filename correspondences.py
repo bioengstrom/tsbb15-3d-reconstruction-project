@@ -13,7 +13,7 @@ class Correspondences:
         is_correspondence_y1 = np.array([np.any(y1 != -1, axis=1)], dtype='bool')
         is_correspondence_y2 = np.array([np.any(y2 != -1, axis=1)], dtype='bool')
         correspondence = np.logical_and(is_correspondence_y1, is_correspondence_y2)
-        y1 = y1[correspondence[0], :]
-        y2 = y2[correspondence[0], :]
+        y1 = np.array(y1[correspondence[0], :])
+        y2 = np.array(y2[correspondence[0], :])
 
         return y1, y2

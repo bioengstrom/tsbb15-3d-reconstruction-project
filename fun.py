@@ -53,7 +53,7 @@ def getEAndK(C, F):
     #Calculate essential matrix E = K.T*F*K
     E = np.matmul(np.transpose(K),np.matmul(F,K))
     return E, K
-    
+
 def reshapeToCamera3DPoints(x0):
     ratio = int((x0.shape[0]/16)*12)
     size = int(ratio/(3*4))

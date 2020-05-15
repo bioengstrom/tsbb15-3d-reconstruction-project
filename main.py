@@ -25,6 +25,8 @@ C = fun.getCameraMatrices()
 #Get putative correspondence points
 correspondences = fun.Correspondences()
 y1, y2 = correspondences.getCorrByIndices(0,1)
+#y2, y3 = correspondences.getCorrByIndices(0,2)
+#print(y2.shape())
 
 """
     INIT1: Choose initial views I1 & I2
@@ -41,6 +43,7 @@ y1p = Fy1y2[1].T
 y2p = Fy1y2[2].T
 
 #Show the image with interest points
+
 plt.imshow(images[0])
 plt.scatter(y1p[:,0], y1p[:,1], color='orange')
 plt.show()
@@ -54,12 +57,18 @@ T_tables = Tables()
 
 E, K = fun.getEAndK(C, F)
 
+#Get R and t from E
+R, t = fun.relative_camera_pose(E, y1[0], y2[0])
+result = cv.decomposeProjectionMatrix(C[0,0,:,:])
+result = np.array(result)
+K = result[0]
+R = result[1]
+t = result[2]
+t = t[:3,0]
+
 #Make the image coordinates homogenous
 y1 = fun.MakeHomogenous(K, y1p)
 y2 = fun.MakeHomogenous(K, y2p)
-
-#Get R and t from E
-R, t = fun.relative_camera_pose(E, y1[:,0], y2[:,0])
 
 #Get first two camera poses
 C1 = CameraPose()
@@ -81,15 +90,22 @@ for i in range(y1.shape[0]):
     T_tables.addObs(y1[i], view_index_1, point_index)
     T_tables.addObs(y2[i], view_index_2, point_index)
 
-#T_tables.sparsity_mask()
+
+T_tables.plot()
+
+
+mask = T_tables.sparsity_mask()
+T_tables.BundleAdjustment2()
+T_tables.plot()
+
 """
     Iterate through all images in sequence
 """
 
 #for i in range(images.shape[0]-1):
-for i in range(1):
-    #Select inlier 3D points T'points
+for i in range(1,2,1):
 
+    #Select inlier 3D points T'points
     """
         BA: Bundle Adjustment of all images so far
     """
@@ -114,12 +130,19 @@ for i in range(1):
     yp2_hom = fun.MakeHomogenous(K, yp2)
     yp3_hom = fun.MakeHomogenous(K, yp3)
 
+
     """
         EXT2: Find 2D<->3D correspondences. Algorithm 21.2
         EXT3: PnP -> R,t of new view and consensus set C
     """
+    """
     A_y1, A_y2 = T_tables.addNewView(K, images[1], images[2], 2, yp2_hom[:100], yp3_hom[:100], yp2[:100], yp3[:100])
     T_tables.plot()
+    mask = T_tables.sparsity_mask()
+    plt.imshow(mask)
+    plt.show()
+    """
+
     """
         EXT4: Extend table with new row and insert image points in C. Algorithm 21.3
         EXT5: For each putative correspondence that satisfies E, extend table with column
@@ -127,9 +150,9 @@ for i in range(1):
     #Add new 3D points
     #T_tables.addNewPoints(A_y1, A_y2, i, i+1)
 
-    """
 
-    """
+
+
 
     """
         WASH2: Check elements not in C and remove either 3D points or observation
