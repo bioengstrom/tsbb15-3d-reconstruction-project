@@ -57,6 +57,7 @@ y2 = fun.MakeHomogenous(K, y2p)
 
 #Get R and t from E
 R, t = fun.relative_camera_pose(E, y1[:,0], y2[:,0])
+
 #Get first two camera poses
 C1 = CameraPose()
 C2 = CameraPose(R,t)
@@ -77,8 +78,7 @@ for i in range(y1.shape[0]):
     T_tables.addObs(y1[i], view_index_1, point_index)
     T_tables.addObs(y2[i], view_index_2, point_index)
 
-T_tables.plot()
-
+T_tables.sparsity_mask()
 """
     Iterate through all images in sequence
 """
