@@ -8,6 +8,30 @@ import math
 import scipy.io as sio
 from correspondences import Correspondences
 
+def getEFromCameras(C1, C2):
+
+    R = C2.R @ C1.R.T
+    t = C2.t - (C2.R @ C1.R.T @ C1.t)
+
+    t_cross = crossProductMat(t)
+
+    #Essential matrix E
+    E = R.T @ t_cross
+    return E
+
+
+def crossProductMat(vec3):
+
+    result = np.zeros([3,3])
+    result[0,1] = -1*vec3[2]
+    result[1,0] = vec3[2]
+    result[0,2] = vec3[1]
+    result[2,0] = -1*vec3[1]
+    result[1,2] = -1*vec3[0]
+    result[2,1] = vec3[0]
+
+    return result
+
 def decomposeP(P):
 
     M = P[0:3,0:3]
@@ -244,16 +268,16 @@ def relative_camera_pose(E, y1, y2):
     if x1[-1] > 0 and x2[-1] > 0:
         return R2, t2
 
-#input 3 x 4 camera matrix
 def camera_resectioning(C):
-    A = C[:,0:3]
-    b = C[:,3]
+    A = C[0:3,0:3]
+    b = C[:,-1]
 
     U, Q = specRQ(A)
     t = np.matmul(scipy.linalg.inv(U), b)
-    U = U/U[2,2]
+    U = U/U[-1,-1]
     D = np.sign(U)
-    K = U@D
+
+    K = U*D
 
     if np.linalg.det(D) == 1:
         R = np.matmul(D,Q)

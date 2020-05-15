@@ -7,6 +7,7 @@ from pnp import p3p
 import cv2 as cv
 import fun as fun
 from scipy.sparse import lil_matrix
+import lab3 as lab3
 
 class Tables:
 
@@ -94,7 +95,7 @@ class Tables:
 
     #Add new new view to T_views
     #coords1 & coords2 are the putative correspondeces
-    def addNewView(self, K, img1, img2, img_index, y1_hom, y2_hom, y1, y2):
+    def addNewView(self, K, img_index, y1_hom, y2_hom, y1, y2):
         print("Adding a view...")
         #image_coords, views, points_3D = self.getObsAsArrays()
         #Set D is the set that is containing matches with points already known
@@ -109,6 +110,7 @@ class Tables:
         for i in range(y1.shape[0]):
             #Got through all observations seen in last view added
             for v in self.T_views[len(self.T_views)-1].observations_index:
+                #print(np.linalg.norm(o.image_coordinates-y1_hom[i]))
                 o = self.T_obs[v]
                 #print(o.image_coordinates)
                 #print(y1_hom[i])
@@ -154,11 +156,20 @@ class Tables:
         C1 = self.T_views[view_index_1].camera_pose
         C2 = self.T_views[view_index_2].camera_pose
 
-        R = C2.R @ C1.R.T
-        t = C2.t - C2.R @ C1.R.T @ C1.t
+        E = fun.getEFromCameras(C1, C2)
+        counter = 0
+        for i in range(A_y1.shape[0]):
+            #Check epipolar constraint
+            #print(np.abs(y1.T @ E @ y2))
+            if np.abs(A_y1[i].T @ E @ A_y2[i]) < 0.001:
+                x = lab3.triangulate_optimal(C1.GetCameraMatrix(), C2.GetCameraMatrix(), A_y1[i], A_y2[i])
+                point_index = self.addPoint(x)
+                self.addObs(A_y1[i], view_index_1, point_index)
+                self.addObs(A_y2[i], view_index_2, point_index)
+                counter = counter + 1
+        return counter
 
-        E = R.T
-        return A_y1
+
 
     def plot(self):
         fig = plt.figure()
