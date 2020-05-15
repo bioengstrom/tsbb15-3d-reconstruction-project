@@ -44,9 +44,9 @@ y2p = Fy1y2[2].T
 
 #Show the image with interest points
 
-plt.imshow(images[0])
-plt.scatter(y1p[:,0], y1p[:,1], color='orange')
-plt.show()
+#plt.imshow(images[0])
+#plt.scatter(y1p[:,0], y1p[:,1], color='orange')
+#plt.show()
 
 """
     INIT2: Get E = R,t from the two intial views
@@ -56,14 +56,8 @@ print("Initialize tables...")
 T_tables = Tables()
 
 E, K = fun.getEAndK(C, F)
-print("Vår K")
-print(K)
-
-K, R, t = fun.decomposeP(C[0,0,:,:])
-print("Inte vår K")
-print(K)
-
-E = np.matmul(np.transpose(K),np.matmul(F,K))
+#K, R, t = fun.decomposeP(C[0,0,:,:])
+#E = np.matmul(np.transpose(K),np.matmul(F,K))
 
 #Get R and t from E
 R, t = fun.relative_camera_pose(E, y1[0], y2[0])
@@ -81,6 +75,8 @@ y2 = fun.MakeHomogenous(K, y2p)
 #Get first two camera poses
 C1 = CameraPose()
 C2 = CameraPose(R,t)
+
+print(t)
 
 #Add the first two Views to the tables.
 #Index 0 and C1 for image 1 and first camera pose. Same for second image and C2
@@ -111,7 +107,7 @@ T_tables.plot()
 """
 
 #for i in range(images.shape[0]-1):
-for i in range(1,5,1):
+for i in range(1,4,1):
     #Select inlier 3D points T'points
     """
         BA: Bundle Adjustment of all images so far
@@ -133,8 +129,8 @@ for i in range(1,5,1):
 
     yp2, yp3 = correspondences.getCorrByIndices(i,i+1)
     #print(yp2.shape)
-    lab3.show_corresp(images[i], images[i+1], yp2.T, yp3.T)
-    plt.show()
+    #lab3.show_corresp(images[i], images[i+1], yp2.T, yp3.T)
+    #plt.show()
     yp2_hom = fun.MakeHomogenous(K, yp2)
     yp3_hom = fun.MakeHomogenous(K, yp3)
 
@@ -144,7 +140,7 @@ for i in range(1,5,1):
         EXT3: PnP -> R,t of new view and consensus set C
     """
 
-    A_y1, A_y2 = T_tables.addNewView(K, images[1], images[2], 2, yp2_hom, yp3_hom, yp2, yp3)
+    A_y1, A_y2 = T_tables.addNewView(K, i, yp2_hom, yp3_hom, yp2, yp3)
     T_tables.plot()
     plt.show()
 
@@ -153,11 +149,15 @@ for i in range(1,5,1):
         EXT4: Extend table with new row and insert image points in C. Algorithm 21.3
         EXT5: For each putative correspondence that satisfies E, extend table with column
     """
+    print("Adding new 3D points...")
     #Add new 3D points
-    T_tables.addNewPoints(A_y1, A_y2, i, i+1)
+    A_y1_hom = fun.MakeHomogenous(K, A_y1)
+    A_y2_hom = fun.MakeHomogenous(K, A_y2)
+    noOfPointsAdded = T_tables.addNewPoints(A_y1_hom, A_y2_hom, i, i+1)
+    print("Added n number of 3D points:")
+    print(noOfPointsAdded)
 
-
-
+    T_tables.plot()
 
 
     """
