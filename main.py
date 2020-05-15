@@ -36,7 +36,7 @@ def reshapeToCamera3DPoints(x0):
 
 def getImages():
     no_of_images = 36
-    img1 = cv.imread("../images/viff.000.ppm", cv.IMREAD_COLOR)
+    img1 = cv.imread("images/viff.000.ppm", cv.IMREAD_COLOR)
     img1 = np.asarray(img1)
 
 
@@ -48,7 +48,7 @@ def getImages():
             no = '0' + no
         #img1 = np.asarray(cv.cvtColor(images[0], cv.COLOR_BGR2GRAY)) # Grayscale
         #img2 = np.asarray(cv.cvtColor(images[1], cv.COLOR_BGR2GRAY))
-        images[i] = np.asarray(cv.imread("../images/viff.0" + no + ".ppm", cv.IMREAD_COLOR))
+        images[i] = np.asarray(cv.imread("images/viff.0" + no + ".ppm", cv.IMREAD_COLOR))
     return images
 
 def getCameraMatrices():
@@ -110,7 +110,9 @@ y2 = MakeHomogenous(K, y2p)
 #Calculate essential matrix E = K.T*F*K
 E = np.matmul(np.transpose(K),np.matmul(F,K))
 #Get R and t from E
-R, t = fun.relative_camera_pose(E, y1[:,0], y2[:,0])
+R_est, t_est = fun.relative_camera_pose(E, y1[:,0], y2[:,0])
+np.save('estimated_R', R_est)
+np.save('estimated_t', t_est)
 #Get first two camera poses
 C1 = CameraPose()
 C2 = CameraPose(R_est,t_est)

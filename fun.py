@@ -203,22 +203,17 @@ def estRigidTransformation(a, b) :
     # Barycentric coordinates
     a_b = a - a0
     b_b = b - b0
-
+    a_b = a_b[:,np.newaxis]
+    b_b = b_b[:,np.newaxis]
+    M = np.matmul(a_b,b_b.T)
+    #print(a_b)
+    #print(b_b)
+    #print(M.shape)
     # Determine R: Strict version of OPP, alg 15.1 IREG
-    U, S, V = specSVD(A@B.T)
+    U, S, V = specSVD(M)
     R = V@U.T # Rotation matrix
     print(np.linalg.det(R))
 
     t = b0 - R*a0 # Translation vector
 
-    return R, t
-
-def evaluation(R,t,R_est,t_est) :
-    M,m = estRigidTransformation(t, t_est)
-
-    t_mapped = M@t_est + m
-    R_mapped = R_est@M.T
-
-    # individual errors for the camera positions
-    err = np.linalg.norm(t - t_mapped)
-    #individual angular error
+    return R,t
