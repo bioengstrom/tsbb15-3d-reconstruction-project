@@ -86,13 +86,6 @@ for i in range(y1.shape[0]):
     T_tables.addObs(y2[i], view_index_2, point_index)
 
 
-T_tables.plot()
-
-
-mask = T_tables.sparsity_mask()
-T_tables.BundleAdjustment2()
-T_tables.plot()
-
 """
     Iterate through all images in sequence
 """
