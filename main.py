@@ -26,10 +26,7 @@ C = fun.getCameraMatrices()
 correspondences = fun.Correspondences()
 y1, y2 = correspondences.getCorrByIndices(0,1)
 
-#Show the image with interest points
-#plt.imshow(images[0])
-#plt.scatter(y1[:,0], y2[:,1], color='orange')
-#plt.show()
+
 
 lab3.show_corresp(images[0], images[1], y1.T, y2.T)
 plt.show()
@@ -39,10 +36,10 @@ plt.show()
 """
 #Naive: choose 2 first img
 #y1 and y2 are the consensus set C
-Fy1y2 = fun.f_matrix(y1, y2)
-np.save("Fmatrix", Fy1y2)
+#Fy1y2 = fun.f_matrix(y1, y2)
+#np.save("Fmatrix", Fy1y2)
 print("Initialize SfM pipeline...")
-#Fy1y2 = np.load("Fmatrix.npy", allow_pickle=True)
+Fy1y2 = np.load("Fmatrix.npy", allow_pickle=True)
 
 F = Fy1y2[0]
 y1p = Fy1y2[1].T
@@ -78,6 +75,7 @@ view_index_2 = T_tables.addView(1,C2)
     INIT3: Triangulate points.
 """
 
+
 for i in range(y1.shape[0]):
     #Triangulate points and add to tables
     new_3D_point = lab3.triangulate_optimal(C1.GetCameraMatrix(), C2.GetCameraMatrix(), y1[i,:2], y2[i,:2])
@@ -85,6 +83,7 @@ for i in range(y1.shape[0]):
     T_tables.addObs(y1[i], view_index_1, point_index)
     T_tables.addObs(y2[i], view_index_2, point_index)
 
+T_tables.plotProjections(0, K, images[0])
 
 """
     Iterate through all images in sequence
@@ -118,15 +117,11 @@ for i in range(1,36,1):
     yp2_hom = fun.MakeHomogenous(K, yp2)
     yp3_hom = fun.MakeHomogenous(K, yp3)
 
-
     """
         EXT2: Find 2D<->3D correspondences. Algorithm 21.2
         EXT3: PnP -> R,t of new view and consensus set C
     """
-
-    A_y1, A_y2 = T_tables.addNewView(K, i, yp2_hom, yp3_hom, yp2, yp3)
-
-
+    A_y1, A_y2 = T_tables.addNewView(K, i+1, yp2_hom, yp3_hom, yp2, yp3)
 
     """
         EXT4: Extend table with new row and insert image points in C. Algorithm 21.3

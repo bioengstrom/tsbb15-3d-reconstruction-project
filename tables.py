@@ -176,7 +176,23 @@ class Tables:
                 counter = counter + 1
         return counter
 
+    def plotProjections(self, index, K, image):
 
+        the_points = np.zeros([0,3])
+        for point in self.T_points:
+            the_points = np.concatenate((the_points, [point.point]), axis = 0)
+
+        dist_coeffs = np.zeros((4,1)) # Assuming no lens distortion
+        last_camera = self.T_views[index].camera_pose
+        R = last_camera.R
+        t = last_camera.t
+        rvec, jac = cv.Rodrigues(R)
+        img_points, jac = cv.projectPoints(the_points[:,:3], rvec, t, K, dist_coeffs)
+        img_points = np.array(img_points[:,0,:])
+        #Show the image with interest points
+        plt.imshow(image)
+        plt.scatter(img_points[:,0], img_points[:,1], color='orange')
+        plt.show()
 
     def plot(self):
         fig = plt.figure()
@@ -212,7 +228,7 @@ class Tables:
             #print(ukj)
             #print((ck1*xj).sum(axis=1)/(ck3*xj).sum(axis=1))
 
-            for i,o in enumerate (self.T_obs):
+            for i,o in enumerate (The_table.T_obs):
                 c = Rktk[o.view_index]
                 c1 = c[0,:]
                 c2 = c[1,:]
