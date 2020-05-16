@@ -104,7 +104,7 @@ for i in range(1,36,1):
         BA: Bundle Adjustment of all images so far
     """
     #print("Bundle adjustment...")
-    T_tables.BundleAdjustment()
+    T_tables.BundleAdjustment2()
 
     """
         WASH1: Remove bad 3D points. Re-triangulate & Remove outliers
@@ -153,6 +153,24 @@ for i in range(1,36,1):
     """
         WASH2: Check elements not in C and remove either 3D points or observation
     """
+    # Compute EpsilonBA
+    # If error is large for several poses, remove 3D point.
+
+    Rktk = np.empty((len(T_tables.T_views), 3,4))
+    xj = np.empty((len(T_tables.T_points),3))
+    yij = np.empty((len(T_tables.T_obs),3))
+
+    for i,o in enumerate(T_tables.T_views):
+        Rktk[i] = o.camera_pose.GetCameraMatrix()
+    for i,o in enumerate(T_tables.T_points):
+        xj[i] = o.point
+    for i,o in enumerate(T_tables.T_obs):
+        yij[i] = o.image_coordinates
+
+    x0 = np.hstack([Rktk.ravel(), xj.ravel()])
+
+    r = fun.EpsilonBA(x0, yij[0], yij[1], T_tables)
+    print(r.shape)
 
 """
     After last iteration: Bundle Adjustment if outliers were removed since last BA
