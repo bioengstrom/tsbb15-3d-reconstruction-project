@@ -25,28 +25,28 @@ C = fun.getCameraMatrices()
 #Get putative correspondence points
 correspondences = fun.Correspondences()
 y1, y2 = correspondences.getCorrByIndices(0,1)
-#y2, y3 = correspondences.getNoOfCorrespondences(0,2)
-#print(y2.shape())
+
+#Show the image with interest points
+#plt.imshow(images[0])
+#plt.scatter(y1[:,0], y2[:,1], color='orange')
+#plt.show()
+
+lab3.show_corresp(images[0], images[1], y1.T, y2.T)
+plt.show()
 
 """
     INIT1: Choose initial views I1 & I2
 """
 #Naive: choose 2 first img
 #y1 and y2 are the consensus set C
-#Fy1y2 = fun.f_matrix(images[0], images[1], y1, y2)
-#np.save("Fmatrix", Fy1y2)
+Fy1y2 = fun.f_matrix(y1, y2)
+np.save("Fmatrix", Fy1y2)
 print("Initialize SfM pipeline...")
-Fy1y2 = np.load("Fmatrix.npy", allow_pickle=True)
+#Fy1y2 = np.load("Fmatrix.npy", allow_pickle=True)
 
 F = Fy1y2[0]
 y1p = Fy1y2[1].T
 y2p = Fy1y2[2].T
-
-#Show the image with interest points
-
-#plt.imshow(images[0])
-#plt.scatter(y1p[:,0], y1p[:,1], color='orange')
-#plt.show()
 
 """
     INIT2: Get E = R,t from the two intial views
@@ -55,28 +55,19 @@ y2p = Fy1y2[2].T
 print("Initialize tables...")
 T_tables = Tables()
 
+#Vårt K
 E, K = fun.getEAndK(C, F)
-#K, R, t = fun.decomposeP(C[0,0,:,:])
-#E = np.matmul(np.transpose(K),np.matmul(F,K))
-
-#Get R and t from E
-R, t = fun.relative_camera_pose(E, y1[0], y2[0])
-"""
-print(K.shape)
-print(R.shape)
-print(t.shape)
-"""
 
 #Make the image coordinates homogenous
 y1 = fun.MakeHomogenous(K, y1p)
 y2 = fun.MakeHomogenous(K, y2p)
-#print(y1)
+
+#Get R and t from E
+R, t = fun.relative_camera_pose(E, y1[0,:2], y2[0,:2]) #Inpute is C-normalized coordinates
 
 #Get first two camera poses
 C1 = CameraPose()
 C2 = CameraPose(R,t)
-
-print(t)
 
 #Add the first two Views to the tables.
 #Index 0 and C1 for image 1 and first camera pose. Same for second image and C2
@@ -89,18 +80,11 @@ view_index_2 = T_tables.addView(1,C2)
 
 for i in range(y1.shape[0]):
     #Triangulate points and add to tables
-    new_3D_point = lab3.triangulate_optimal(C1.GetCameraMatrix(), C2.GetCameraMatrix(), y1[i], y2[i])
+    new_3D_point = lab3.triangulate_optimal(C1.GetCameraMatrix(), C2.GetCameraMatrix(), y1[i,:2], y2[i,:2])
     point_index = T_tables.addPoint(new_3D_point)
     T_tables.addObs(y1[i], view_index_1, point_index)
     T_tables.addObs(y2[i], view_index_2, point_index)
 
-
-T_tables.plot()
-
-
-mask = T_tables.sparsity_mask()
-T_tables.BundleAdjustment2()
-T_tables.plot()
 
 """
     Iterate through all images in sequence
@@ -110,13 +94,12 @@ T_tables.plot()
 #print(proj_err.shape)
 
 #for i in range(images.shape[0]-1):
-for i in range(1,4,1):
+for i in range(1,36,1):
     #Select inlier 3D points T'points
     """
         BA: Bundle Adjustment of all images so far
     """
     #print("Bundle adjustment...")
-    #T_tables.BundleAdjustment()
     T_tables.BundleAdjustment2()
 
     """
@@ -145,8 +128,7 @@ for i in range(1,4,1):
     """
 
     A_y1, A_y2 = T_tables.addNewView(K, i, yp2_hom, yp3_hom, yp2, yp3)
-    T_tables.plot()
-    plt.show()
+
 
 
     """
