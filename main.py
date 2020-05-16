@@ -36,10 +36,10 @@ plt.show()
 """
 #Naive: choose 2 first img
 #y1 and y2 are the consensus set C
-#Fy1y2 = fun.f_matrix(y1, y2)
-#np.save("Fmatrix", Fy1y2)
+Fy1y2 = fun.f_matrix(y1, y2)
+np.save("Fmatrix", Fy1y2)
 print("Initialize SfM pipeline...")
-Fy1y2 = np.load("Fmatrix.npy", allow_pickle=True)
+#Fy1y2 = np.load("Fmatrix.npy", allow_pickle=True)
 
 F = Fy1y2[0]
 y1p = Fy1y2[1].T
@@ -61,7 +61,8 @@ y2 = fun.MakeHomogenous(K, y2p)
 
 #Get R and t from E
 R, t = fun.relative_camera_pose(E, y1[0,:2], y2[0,:2]) #Inpute is C-normalized coordinates
-
+print(R)
+print(t)
 #Get first two camera poses
 C1 = CameraPose()
 C2 = CameraPose(R,t)
@@ -88,6 +89,9 @@ T_tables.plotProjections(0, K, images[0])
 """
     Iterate through all images in sequence
 """
+# Array for re-projection errors. (36, number of points)
+#proj_err = np.empty(( ,images.shape[0]))
+#print(proj_err.shape)
 
 #for i in range(images.shape[0]-1):
 for i in range(1,36,1):
@@ -97,7 +101,7 @@ for i in range(1,36,1):
     """
     #print("Bundle adjustment...")
     T_tables.BundleAdjustment2()
-
+    T_tables.plot()
     """
         WASH1: Remove bad 3D points. Re-triangulate & Remove outliers
     """
@@ -121,7 +125,10 @@ for i in range(1,36,1):
         EXT2: Find 2D<->3D correspondences. Algorithm 21.2
         EXT3: PnP -> R,t of new view and consensus set C
     """
+
     A_y1, A_y2 = T_tables.addNewView(K, i+1, yp2_hom, yp3_hom, yp2, yp3)
+
+
 
     """
         EXT4: Extend table with new row and insert image points in C. Algorithm 21.3
@@ -144,21 +151,28 @@ for i in range(1,36,1):
     # Compute EpsilonBA
     # If error is large for several poses, remove 3D point.
 
-    Rktk = np.empty((len(T_tables.T_views), 3,4))
-    xj = np.empty((len(T_tables.T_points),3))
-    yij = np.empty((len(T_tables.T_obs),3))
+    #err = np.empty((len(T_tables.T_points)))
+    #y = T_tables.T_points[
+    #print(y)
 
-    for i,o in enumerate(T_tables.T_views):
-        Rktk[i] = o.camera_pose.GetCameraMatrix()
-    for i,o in enumerate(T_tables.T_points):
-        xj[i] = o.point
-    for i,o in enumerate(T_tables.T_obs):
-        yij[i] = o.image_coordinates
+    # for each 3D point in T_points
+    for i,p in enumerate(T_tables.T_points) :
+        # Only check if p is outlier if it exists
+        # in more than n views
+        n_views = len(T_tables.T_obs[p.observations_index])
+        if(n_views > 3) :
+            residuals = np.empty((n_views,1))
+            yp = T_tables.T_obs[p.observations_index]
+            for i,y in enumerate(yp) :
+                C = T_tables.T_views[y.view_index]
+                p_homog = np.append(p.point[:,np.newaxis], 1)
+                p_proj = np.dot(C.camera_pose.GetCameraMatrix(), p_homog) # Project p with C
 
-    x0 = np.hstack([Rktk.ravel(), xj.ravel()])
-
-    r = fun.EpsilonBA(x0, yij[0], yij[1], T_tables)
-    print(r.shape)
+                residuals[i] = np.linalg.norm(y.image_coordinates - p_proj)
+            # if all the projection errors are larger than a threshold
+            # delete 3D point p (outlier)
+            if(residuals.all() > 1.0) :
+                print("Delete point not implemented. :(")
 
 """
     After last iteration: Bundle Adjustment if outliers were removed since last BA
