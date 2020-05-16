@@ -94,14 +94,14 @@ T_tables.plotProjections(0, K, images[0])
 #print(proj_err.shape)
 
 #for i in range(images.shape[0]-1):
-for i in range(1,36,1):
+for i in range(1,34,1):
     #Select inlier 3D points T'points
     """
         BA: Bundle Adjustment of all images so far
     """
     #print("Bundle adjustment...")
     T_tables.BundleAdjustment2()
-    T_tables.plot()
+    #T_tables.plot()
     """
         WASH1: Remove bad 3D points. Re-triangulate & Remove outliers
     """
@@ -125,9 +125,11 @@ for i in range(1,36,1):
         EXT2: Find 2D<->3D correspondences. Algorithm 21.2
         EXT3: PnP -> R,t of new view and consensus set C
     """
-
+    print("Adding view no:")
+    print(i+1)
     A_y1, A_y2 = T_tables.addNewView(K, i+1, yp2_hom, yp3_hom, yp2, yp3)
-
+    T_tables.plotProjections(i+1, K, images[i+1])
+    T_tables.plot()
 
 
     """
@@ -142,7 +144,7 @@ for i in range(1,36,1):
     print("Added n number of 3D points:")
     print(noOfPointsAdded)
 
-    T_tables.plot()
+
 
 
     """
@@ -177,3 +179,5 @@ for i in range(1,36,1):
 """
     After last iteration: Bundle Adjustment if outliers were removed since last BA
 """
+
+T_tables.plot()

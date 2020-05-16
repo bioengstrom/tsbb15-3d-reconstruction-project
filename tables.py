@@ -96,7 +96,7 @@ class Tables:
     #Add new new view to T_views
     #coords1 & coords2 are the putative correspondeces
     def addNewView(self, K, img_index, y1_hom, y2_hom, y1, y2):
-        print("Adding a view...")
+
         #image_coords, views, points_3D = self.getObsAsArrays()
         #Set D is the set that is containing matches with points already known
         D_3Dpoints = np.zeros([0,3])
