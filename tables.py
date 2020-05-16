@@ -212,7 +212,7 @@ class Tables:
             #print(ukj)
             #print((ck1*xj).sum(axis=1)/(ck3*xj).sum(axis=1))
 
-            for i,o in enumerate (self.T_obs):
+            for i,o in enumerate (The_table.T_obs):
                 c = Rktk[o.view_index]
                 c1 = c[0,:]
                 c2 = c[1,:]
