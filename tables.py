@@ -106,27 +106,30 @@ class Tables:
         #A is the set of putative correspondences that do not find any match
         A_y1 = np.zeros([0,2])
         A_y2 = np.zeros([0,2])
+        print("y1 shape add new view")
+        print(y1.shape)
+
 
         for i in range(y1.shape[0]):
+            found = False
+            match = 0
             #Got through all observations seen in last view added
             for v in self.T_views[len(self.T_views)-1].observations_index:
-                #print(np.linalg.norm(o.image_coordinates-y1_hom[i]))
-                o = self.T_obs[v]
-                #print(o.image_coordinates)
-                #print(y1_hom[i])
-                if np.linalg.norm(o.image_coordinates-y1_hom[i]) < 0.001:
-                    #There is a corresponding 3D point x in T_points! Add y2, x to D
-                    j = o.point_3D_index
-                    x_i = np.concatenate((x_i, [j]), axis = 0)
-                    #print(self.T_points[j].point.shape)
-                    D_3Dpoints = np.concatenate((D_3Dpoints, [self.T_points[j].point]), axis = 0)
-                    #print(y2[i].shape)
-                    D_imgcoords = np.concatenate((D_imgcoords, [y2[i]]), axis = 0)
-                    D_imgcoords_hom = np.concatenate((D_imgcoords_hom, [y2_hom[i]]), axis = 0)
-                else:
-                    #No correspondence found - add to A
-                    A_y1 = np.concatenate((A_y1, [y1[i]]), axis = 0)
-                    A_y2 = np.concatenate((A_y2, [y2[i]]), axis = 0)
+                match = self.T_obs[v]
+                if np.linalg.norm(match.image_coordinates-y1_hom[i]) < 0.001:
+                    found = True
+                    break
+            #There is a corresponding 3D point x in T_points! Add y2, x to D
+            if found == True:
+                j = match.point_3D_index
+                x_i = np.concatenate((x_i, [j]), axis = 0)
+                D_3Dpoints = np.concatenate((D_3Dpoints, [self.T_points[j].point]), axis = 0)
+                D_imgcoords = np.concatenate((D_imgcoords, [y2[i]]), axis = 0)
+                D_imgcoords_hom = np.concatenate((D_imgcoords_hom, [y2_hom[i]]), axis = 0)
+            #No correspondence found - add to A
+            else:
+                A_y1 = np.concatenate((A_y1, [y1[i]]), axis = 0)
+                A_y2 = np.concatenate((A_y2, [y2[i]]), axis = 0)
 
         print("Doing ransac pnp with n many elements:")
         print(D_3Dpoints.shape[0])
@@ -149,6 +152,10 @@ class Tables:
             #Add all image points to T_obs.
             self.addObs(y2, view_index, x)
 
+        print("A y1 y2")
+        print(A_y1.shape)
+        print(A_y2.shape)
+
         #return a set of putative correspondences between the images so far without 3D points
         return A_y1, A_y2
 
@@ -161,7 +168,7 @@ class Tables:
         for i in range(A_y1.shape[0]):
             #Check epipolar constraint
             #print(np.abs(y1.T @ E @ y2))
-            if np.abs(A_y1[i].T @ E @ A_y2[i]) < 0.001:
+            if np.abs(A_y1[i].T @ E @ A_y2[i]) < 0.01:
                 x = lab3.triangulate_optimal(C1.GetCameraMatrix(), C2.GetCameraMatrix(), A_y1[i], A_y2[i])
                 point_index = self.addPoint(x)
                 self.addObs(A_y1[i], view_index_1, point_index)

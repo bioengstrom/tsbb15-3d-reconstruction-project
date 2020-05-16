@@ -7,6 +7,7 @@ from scipy.optimize import least_squares
 import math
 import scipy.io as sio
 from correspondences import Correspondences
+from help_classes import CameraPose, Point_3D, Observation, View
 
 def getEFromCameras(C1, C2):
 
@@ -88,7 +89,7 @@ def getEAndK(C, F):
         K, R[i,:,:], t[i,:] = camera_resectioning(C[0,i,:,:])
 
     #Calculate essential matrix E = K.T*F*K
-    E = np.matmul(np.transpose(K),np.matmul(F,K))
+    E = np.matmul(np.matmul(np.transpose(K),F),K)
     return E, K
 
 def reshapeToCamera3DPoints(x0):
@@ -109,7 +110,7 @@ def matchingMatrix(roi1, roi2) :
             #print(matrix[i,j])
     return matrix
 
-def f_matrix(img1, img2, coords1_t, coords2_t) :
+def f_matrix(coords1_t, coords2_t) :
 
 
     """
@@ -140,7 +141,7 @@ def f_matrix(img1, img2, coords1_t, coords2_t) :
     # coords1_t = coords1.T
     # coords2_t = coords2.T
 
-    F, mask = cv.findFundamentalMat(coords1_t, coords2_t, cv.FM_RANSAC)
+    F, mask = cv.findFundamentalMat(coords1_t, coords2_t, cv.FM_8POINT)
 
     # We select only inlier points
     coords1_t = coords1_t[mask.ravel()==1]
@@ -165,7 +166,7 @@ def f_matrix(img1, img2, coords1_t, coords2_t) :
     C1 = solution.x[:12].reshape(3,4)
     F_gold = lab3.fmatrix_from_cameras(C1, C2)
 
-    return F_gold, inl_coords1, inl_coords2
+    return F, inl_coords1, inl_coords2
 
 #input n x 3 matrix
 def specRQ(M):
@@ -201,72 +202,72 @@ def specRQ(M):
 def specSVD(M):
     U, S, V = scipy.linalg.svd(M)
 
+    det_U = np.linalg.det(U)
+    det_V = np.linalg.det(V)
+
     un = U[:,-1]
     vm = V[:,-1]
 
-    U[:,-1] = np.linalg.det(U)*un
-    V[:,-1] = np.linalg.det(V)*vm
+    U[:,-1] = det_U * un
+    V[:,-1] = det_V * vm
 
     s = S[-1]
-    s1 = np.linalg.det(U)*np.linalg.det(V)*s
+    s1 = det_U*det_V*s
     S[-1] = s1
 
     return U, S, V
 
+
 def relative_camera_pose(E, y1, y2):
+
+    #Inpute is C-normalized coordinates
     U,S,Vh = specSVD(E)
     W = np.zeros((3,3))
     W[0,1] = 1
     W[1,0] = -1
     W[2,2] = 1
 
-    R1 = np.transpose(Vh)@W@np.transpose(U)
-    R2 = np.transpose(Vh)@np.transpose(W)@np.transpose(U)
+    R = np.transpose(Vh)@W@np.transpose(U)
+    R_prim = np.transpose(Vh)@np.transpose(W)@np.transpose(U)
 
     V = np.transpose(Vh)
     t1 = V[:,-1]
     t2 = V[:,-1]*-1
 
     #C0 [I | 0]
+    identity = CameraPose()
     C0 = np.zeros((3,4), dtype='double')
     C0[:3,:3] = np.eye(3)
 
-    C1t1R1 = np.zeros((3,4), dtype='double')
-    C1t1R1[:,-1] = t1
-    C1t1R1[:3,:3] = R1
-
-    C1t1R2 = np.zeros((3,4), dtype='double')
-    C1t1R2[:,-1] = t1
-    C1t1R2[:3,:3] = R2
-
-    C1t2R1 = np.zeros((3,4), dtype='double')
-    C1t2R1[:,-1] = t2
-    C1t2R1[:3,:3] = R1
-
-    C1t2R2 = np.zeros((3,4), dtype='double')
-    C1t2R2[:,-1] = t2
-    C1t2R2[:3,:3] = R2
+    C1 = CameraPose(R, t1)
+    C2 = CameraPose(R_prim, t1)
+    C3 = CameraPose(R, t2)
+    C4 = CameraPose(R_prim, t2)
 
     #case1
-    x1 = lab3.triangulate_optimal(C0, C1t1R1, y1, y2)
-    x2 = (R1@x1)+t1
+    x1 = lab3.triangulate_optimal(identity.GetCameraMatrix(), C1.GetCameraMatrix(), y1, y2)
+    x2 = (R@x1)+t1
     if x1[-1] > 0 and x2[-1] > 0:
-        return R1, t1
+
+        return R, t1
     #case2
-    x1 = lab3.triangulate_optimal(C0, C1t2R1, y1, y2)
-    x2 = (R1@x1)+t2
+    x1 = lab3.triangulate_optimal(identity.GetCameraMatrix(), C2.GetCameraMatrix(), y1, y2)
+    x2 = (R@x1)+t2
     if x1[-1] > 0 and x2[-1] > 0:
-        return R1, t2
+
+        return R, t2
     #case3
-    x1 = lab3.triangulate_optimal(C0, C1t1R2, y1, y2)
-    x2 = (R2@x1)+t1
+    x1 = lab3.triangulate_optimal(identity.GetCameraMatrix(), C3.GetCameraMatrix(), y1, y2)
+    x2 = (R_prim@x1)+t1
     if x1[-1] > 0 and x2[-1] > 0:
-        return R2, t1
+
+        return R_prim, t1
     #case4
-    x1 = lab3.triangulate_optimal(C0, C1t2R2, y1, y2)
-    x2 = (R2@x1)+t2
+    x1 = lab3.triangulate_optimal(identity.GetCameraMatrix(), C4.GetCameraMatrix(), y1, y2)
+    x2 = (R_prim@x1)+t2
     if x1[-1] > 0 and x2[-1] > 0:
-        return R2, t2
+
+        return R_prim, t2
 
 def camera_resectioning(C):
     A = C[0:3,0:3]
@@ -275,16 +276,19 @@ def camera_resectioning(C):
     U, Q = specRQ(A)
     t = np.matmul(scipy.linalg.inv(U), b)
     U = U/U[-1,-1]
-    D = np.sign(U)
+    D = np.zeros([3,3])
+    D[0,0] = np.sign(U[0,0])
+    D[1,1] = np.sign(U[1,1])
+    D[2,2] = np.sign(U[2,2])
 
-    K = U*D
+    K = U@D
 
     if np.linalg.det(D) == 1:
-        R = np.matmul(D,Q)
-        t = np.matmul(D,t)
+        R = D@Q
+        t = D@t
     else:
-        R = np.matmul(-1*D,Q)
-        t = np.matmul(-1*D,t)
+        R = -1*D@Q
+        t = -1*D@t
     return K,R,t
 
 def reshapeToCamera3DPoints2(x0, n_C, n_P):
