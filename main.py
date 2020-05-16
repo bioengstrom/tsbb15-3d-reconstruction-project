@@ -105,6 +105,9 @@ T_tables.plot()
 """
     Iterate through all images in sequence
 """
+# Array for re-projection errors. (36, number of points)
+#proj_err = np.empty(( ,images.shape[0]))
+#print(proj_err.shape)
 
 #for i in range(images.shape[0]-1):
 for i in range(1,4,1):
@@ -158,33 +161,38 @@ for i in range(1,4,1):
     print("Added n number of 3D points:")
     print(noOfPointsAdded)
 
-<<<<<<< HEAD
-=======
     T_tables.plot()
 
 
->>>>>>> 8f9f54a609034bbb726a4206f7d2fcf35a5f76e9
     """
         WASH2: Check elements not in C and remove either 3D points or observation
     """
     # Compute EpsilonBA
     # If error is large for several poses, remove 3D point.
 
-    Rktk = np.empty((len(T_tables.T_views), 3,4))
-    xj = np.empty((len(T_tables.T_points),3))
-    yij = np.empty((len(T_tables.T_obs),3))
+    #err = np.empty((len(T_tables.T_points)))
+    #y = T_tables.T_points[
+    #print(y)
 
-    for i,o in enumerate(T_tables.T_views):
-        Rktk[i] = o.camera_pose.GetCameraMatrix()
-    for i,o in enumerate(T_tables.T_points):
-        xj[i] = o.point
-    for i,o in enumerate(T_tables.T_obs):
-        yij[i] = o.image_coordinates
+    # for each 3D point in T_points
+    for i,p in enumerate(T_tables.T_points) :
+        # Only check if p is outlier if it exists
+        # in more than n views
+        n_views = len(T_tables.T_obs[p.observations_index])
+        if(n_views > 3) :
+            residuals = np.empty((n_views,1))
+            yp = T_tables.T_obs[p.observations_index]
+            for i,y in enumerate(yp) :
+                C = T_tables.T_views[y.view_index]
+                p_homog = np.append(p.point[:,np.newaxis], 1)
+                p_proj = np.dot(C.camera_pose.GetCameraMatrix(), p_homog) # Project p with C
 
-    x0 = np.hstack([Rktk.ravel(), xj.ravel()])
+                residuals[i] = np.linalg.norm(y.image_coordinates - p_proj)
+            # if all the projection errors are larger than a threshold
+            # delete 3D point p (outlier)
+            if(residuals.all() > 1.0) :
+                print("Delete point not implemented. :(")
 
-    r = fun.EpsilonBA(x0, yij[0], yij[1], T_tables)
-    print(r.shape)
 
 """
     After last iteration: Bundle Adjustment if outliers were removed since last BA
