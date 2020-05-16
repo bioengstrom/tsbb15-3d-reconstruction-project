@@ -20,7 +20,6 @@ def getEFromCameras(C1, C2):
     E = R.T @ t_cross
     return E
 
-
 def crossProductMat(vec3):
 
     result = np.zeros([3,3])
@@ -170,27 +169,6 @@ def f_matrix(coords1_t, coords2_t) :
 
 #input n x 3 matrix
 def specRQ(M):
-    #own implementation of special rq, doesnt work
-    """
-    m3 = M[-1, :]
-    m2 = M[-2, :]
-    #print(M)
-    #print(m3)
-    #print(m2)
-
-    q3 = m3/np.linalg.norm(m3)
-    print(np.dot(q3,m2))
-    q2 = m2-(q3*np.dot(q3,m2))/(np.sqrt(np.linalg.norm(m2)**2-np.dot(q3,m2)**2))
-    q1 = np.cross(q2,q3)
-
-    Q = np.array((q1,q2,q3))
-    U = M*np.matrix.transpose(Q)
-
-    #test
-    M1 = U*Q
-    print(Q)
-    print(U)
-    """
     #maybe right implementation of special rq
     U, Q = scipy.linalg.rq(M)
     if np.linalg.det(Q) == -1:

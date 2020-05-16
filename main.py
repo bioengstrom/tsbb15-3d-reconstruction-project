@@ -69,8 +69,6 @@ R, t = fun.relative_camera_pose(E, y1[0,:2], y2[0,:2]) #Inpute is C-normalized c
 C1 = CameraPose()
 C2 = CameraPose(R,t)
 
-print(t)
-
 #Add the first two Views to the tables.
 #Index 0 and C1 for image 1 and first camera pose. Same for second image and C2
 view_index_1 = T_tables.addView(0,C1)
