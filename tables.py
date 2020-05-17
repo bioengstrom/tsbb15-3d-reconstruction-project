@@ -49,6 +49,28 @@ class Tables:
             self.T_obs
         return T_obs.
     """
+
+    def deletePoint(self, idx) :
+        # for each idx in T_obs to be deleted:
+        # if T_views points to obs idx larger than idx: -1
+        # if T_points points to obs idx larger than idx: -1
+        # Basically shifting every observations_index by -1 when an obs is deleted
+
+        p_obs_idx = self.T_points[idx].observations_index
+        for i in p_obs_idx :
+            for C in self.T_views :
+                for j in range(C.observations_index.shape[0]) :
+                    if(C.observations_index[j] > i) :
+                        C.observations_index[j] -= 1
+            for P in self.T_points :
+                for j in range(P.observations_index.shape[0]) :
+                    if(P.observations_index[j] > i) :
+                        P.observations_index[j] -= 1
+            p_obs_idx = self.T_points[idx].observations_index
+        self.T_obs = np.delete(self.T_obs, p_obs_idx)
+        self.T_points = np.delete(self.T_points, idx)
+
+
     def getObsAsArrays(self):
         yij = []
         Rktk = []
@@ -175,7 +197,6 @@ class Tables:
                 self.addObs(A_y2[i], view_index_2, point_index)
                 counter = counter + 1
         return counter
-
 
 
     def plot(self):
