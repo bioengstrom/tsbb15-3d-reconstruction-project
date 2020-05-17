@@ -206,12 +206,16 @@ class Tables:
 
     def plot(self):
         fig = plt.figure()
-        ax = fig.add_subplot(111, projection='3d')
+        ax = fig.gca(projection='3d')
+        ax.set_xlim([-5, 5])
+        ax.set_ylim([-5, 5])
+        ax.set_zlim([0, 10])
         for i in self.T_points:
             ax.scatter(i.point[0], i.point[1], i.point[2], marker='o', color='orange')
         for i in self.T_views:
             position = -1.0*(i.camera_pose.R.T @ i.camera_pose.t)
             ax.scatter(position[0], position[1], position[2], marker='^', color='black')
+        
         plt.show()
 
     def BundleAdjustment2(self):

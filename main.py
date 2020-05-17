@@ -189,7 +189,7 @@ for i in range(1,34,1):
             # delete 3D point p (outlier)
             if(residuals.all() > 1.0) :
                 print("Delete point not implemented. :(")
-T_tables.plot()
+    T_tables.plot()
 """
     After last iteration: Bundle Adjustment if outliers were removed since last BA
 """
