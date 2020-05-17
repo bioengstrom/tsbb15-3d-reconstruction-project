@@ -5,26 +5,26 @@ class Correspondences:
 
     def __init__(self):
         #load noisy
-        """
         self.points = np.loadtxt('imgdata/points.txt')
+        
         """
         #load cleaned
         points = sio.loadmat('BAdino2.mat')
         newPoints2D = points['newPoints2D']
         newPoints2D = np.asarray(newPoints2D.tolist())
         self.points = newPoints2D[0,:,:,:]
+        """
 
     def getCorrByIndices(self,i1, i2):
         #load noisy
-        """
         y1 = self.points[:,i1*2:(i1*2)+2]
         y2 = self.points[:,i2*2:(i2*2)+2]
+        
         """
-
         #load cleaned
         y1 = self.points[i1,:,:].T
         y2 = self.points[i2,:,:].T
-        
+        """
 
         #Remove all rows in y1 and y2 that has -1:s in any of y1 and y2
         is_correspondence_y1 = np.array([np.any(y1 != -1, axis=1)], dtype='bool')
