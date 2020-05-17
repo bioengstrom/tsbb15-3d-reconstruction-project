@@ -168,7 +168,7 @@ class Tables:
         for i in range(A_y1.shape[0]):
             #Check epipolar constraint
             #print(np.abs(y1.T @ E @ y2))
-            if np.abs(A_y1[i].T @ E @ A_y2[i]) < 0.01:
+            if np.abs(A_y1[i].T @ E @ A_y2[i]) < 0.1:
                 x = lab3.triangulate_optimal(C1.GetCameraMatrix(), C2.GetCameraMatrix(), A_y1[i], A_y2[i])
                 point_index = self.addPoint(x)
                 self.addObs(A_y1[i], view_index_1, point_index)
@@ -270,9 +270,22 @@ class Tables:
 
         x0 = np.hstack([Rktk.ravel(), xj.ravel()])
         #print(x0.shape)
+        r = EpsilonBA(x0, yij[:,0],yij[:,1], self)
         result = least_squares(EpsilonBA, x0, args=([yij[:,0],yij[:,1], self]), jac_sparsity=self.sparsity_mask(), verbose=2, x_scale='jac', ftol=1e-4, method='trf')
         #print(result.jac.shape)
+        #J_mask = self.sparsity_mask()
+        #plt.figure()
+        #plt.imshow(J_mask)
+        """
+        plt.figure()
+        plt.subplot(311)
+        plt.plot(r)
 
+        plt.subplot(312)
+        plt.plot(result.fun)
+
+        plt.show()
+        """
         n_C = self.T_views.shape[0]
         n_P = self.T_points.shape[0]
         new_pose, new_points = fun.reshapeToCamera3DPoints2(result.x, n_C, n_P)
@@ -283,20 +296,47 @@ class Tables:
 
     #function that computes a suitable sparsity pattern as a function of the number of point correspondences
     def sparsity_mask(self):
-
+        """
         Jc = np.zeros((len(self.T_obs)*2, (len(self.T_views)*12)))
         Jp = np.zeros((len(self.T_obs)*2, (len(self.T_points)*3)))
         k = 0
         for i,o in enumerate (self.T_obs):
-            if(o.view_index == 0):
-                continue
+            #if(o.view_index == 0):
+             #   continue
             Jc[k:k+1,o.view_index*12:(o.view_index*12)+12] = 1
             Jp[k:k+1,o.point_3D_index*3:(o.point_3D_index*3)+3] = 1
             k = k+2
 
         J_mask = np.hstack((Jc,Jp))
+        """
+        camera_idx = np.empty(len(self.T_obs))
+        point_idx = np.empty(len(self.T_obs))
 
-        return J_mask
+        for i,o in enumerate(self.T_obs):
+            camera_idx[i] = o.view_index
+            point_idx[i] = o.point_3D_index
+        
+
+        m = len(self.T_obs) * 2
+        n = len(self.T_views) * 12 + len(self.T_points) * 3
+        A = lil_matrix((m, n), dtype = 'int')
+
+        i = np.arange(len(self.T_obs))
+        for s in range(12):
+            A[2 * i, camera_idx * 12 + s] = 1
+            A[2 * i + 1, camera_idx * 12 + s] = 1
+        
+
+        for s in range(3):
+            A[2 * i, len(self.T_views) * 12 + point_idx * 3 + s] = 1
+            A[2 * i + 1, len(self.T_views) * 12 + point_idx* 3 + s] = 1
+
+        A[:,0:12] = 0
+        #plt.spy(A)
+        #plt.show()
+        return A
+
+        #return J_mask
 
     def updateCameras3Dpoints2(self, new_pose, new_points):
         for i, o in enumerate(self.T_views):

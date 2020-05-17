@@ -114,7 +114,7 @@ for i in range(1,34,1):
     """
     #print("Bundle adjustment...")
     T_tables.BundleAdjustment2()
-    T_tables.plotProjections(i, K, images[i])
+    #T_tables.plotProjections(i, K, images[i])
     #T_tables.plot()
     """
         WASH1: Remove bad 3D points. Re-triangulate & Remove outliers
@@ -142,8 +142,8 @@ for i in range(1,34,1):
     print("Adding view no:")
     print(i+1)
     A_y1, A_y2 = T_tables.addNewView(K, i+1, yp2_hom, yp3_hom, yp2, yp3)
-    T_tables.plotProjections(i+1, K, images[i+1])
-    T_tables.plot()
+    #T_tables.plotProjections(i+1, K, images[i+1])
+    #T_tables.plot()
 
 
     """
@@ -189,9 +189,9 @@ for i in range(1,34,1):
             # delete 3D point p (outlier)
             if(residuals.all() > 1.0) :
                 print("Delete point not implemented. :(")
-
+T_tables.plot()
 """
     After last iteration: Bundle Adjustment if outliers were removed since last BA
 """
 
-T_tables.plot()
+
