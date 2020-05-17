@@ -116,7 +116,7 @@ class Tables:
             #Got through all observations seen in last view added
             for v in self.T_views[len(self.T_views)-1].observations_index:
                 match = self.T_obs[v]
-                if np.linalg.norm(match.image_coordinates-y1_hom[i]) < 0.001:
+                if np.linalg.norm(match.image_coordinates-y1_hom[i]) < 0.0001:
                     found = True
                     break
             #There is a corresponding 3D point x in T_points! Add y2, x to D
@@ -135,7 +135,7 @@ class Tables:
         print(D_3Dpoints.shape[0])
         #Pnp Algorithm return consensus set C of correspondences that agree with the estimated camera pose
         dist_coeffs = np.zeros((4,1)) # Assuming no lens distortion
-        retval, R, t, inliers = cv.solvePnPRansac(D_3Dpoints[:,:3], D_imgcoords[:,:2], K, dist_coeffs)
+        retval, R, t, inliers = cv.solvePnPRansac(D_3Dpoints[:,:3], D_imgcoords[:,:2], K, dist_coeffs, useExtrinsicGuess=True)
 
         print("Ransac done!")
         #Make the rotation vector 3x3 matrix w open cv rodrigues method
@@ -177,7 +177,7 @@ class Tables:
         return counter
 
     def plotProjections(self, index, K, image):
-        """
+
         the_points = np.zeros([0,3])
         for point in self.T_points:
             the_points = np.concatenate((the_points, [point.point]), axis = 0)
@@ -203,6 +203,26 @@ class Tables:
             proj1 = proj1[0:2]
             plt.scatter(proj1[0], proj1[1], c= 'r', s = 40)
         plt.show()
+        """
+    def triangulateAndAddPoints(self, view_index_1, view_index_2, C1, C2, K, y1, y2, y1_hom, y2_hom):
+
+        for i in range(y1.shape[0]):
+            #Triangulate points and add to tables
+            #new_3D_point = lab3.triangulate_optimal(C1.GetCameraMatrix(), C2.GetCameraMatrix(), y1_hom[i,:2], y2_hom[i,:2])
+
+            #Open CV triangulering
+            the_points = np.concatenate((y1_hom[i,:2], y2_hom[i,:2]), axis=0)
+            cameras =  np.concatenate((C1.GetCameraMatrix(), C2.GetCameraMatrix()), axis=0)
+            cam0 = K @ C1.GetCameraMatrix()
+            cam1 = K @ C2.GetCameraMatrix()
+
+            new_3D_point = cv.triangulatePoints(cam0,cam1,y1[i],y2[i])
+            new_3D_point = new_3D_point/new_3D_point[3]
+            new_3D_point = new_3D_point[0:3, 0]
+
+            point_index = self.addPoint(new_3D_point)
+            self.addObs(y1_hom[i], view_index_1, point_index)
+            self.addObs(y2_hom[i], view_index_2, point_index)
 
     def plot(self):
         fig = plt.figure()

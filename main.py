@@ -52,7 +52,10 @@ Den andra gruppens F
 F = np.array([[1.20899205e-08,  1.87079612e-07, 4.39313278e-04 ], [2.41307322e-07, -8.82954119e-09 , 7.81238182e-03 ], [ 5.75003645e-05 , -7.97164482e-03 , -1.74092676e-01 ]])
 """
 #F, mask = cv.findFundamentalMat(y1,y2,cv.FM_RANSAC  )
-F = fun.getFFromLabCode(y1.T, y2.T)
+#F = fun.getFFromLabCode(y1.T, y2.T)
+#Pickle F
+#np.save("Fmatrix", F)
+F = np.load("Fmatrix.npy", allow_pickle=True)
 
 lab3.plot_eplines(F, y2.T, images[0].shape)
 plt.show()
@@ -89,16 +92,10 @@ view_index_2 = T_tables.addView(1,C2)
 """
     INIT3: Triangulate points.
 """
-
-for i in range(y1.shape[0]):
-    #Triangulate points and add to tables
-    new_3D_point = lab3.triangulate_optimal(C1.GetCameraMatrix(), C2.GetCameraMatrix(), y1_hom[i,:2], y2_hom[i,:2])
-    point_index = T_tables.addPoint(new_3D_point)
-    T_tables.addObs(y1_hom[i], view_index_1, point_index)
-    T_tables.addObs(y2_hom[i], view_index_2, point_index)
+T_tables.triangulateAndAddPoints(view_index_1, view_index_2, C1, C2, K, y1, y2, y1_hom, y2_hom)
 
 T_tables.plotProjections(0, K, images[0])
-
+T_tables.plotProjections(1, K, images[1])
 """
     Iterate through all images in sequence
 """
@@ -113,8 +110,8 @@ for i in range(1,34,1):
         BA: Bundle Adjustment of all images so far
     """
     #print("Bundle adjustment...")
-    T_tables.BundleAdjustment2()
-    T_tables.plotProjections(i, K, images[i])
+    #T_tables.BundleAdjustment2()
+    #T_tables.plotProjections(i, K, images[i])
     #T_tables.plot()
     """
         WASH1: Remove bad 3D points. Re-triangulate & Remove outliers
