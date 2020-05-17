@@ -24,15 +24,17 @@ C = fun.getCameraMatrices()
 
 #Get putative correspondence points
 correspondences = fun.Correspondences()
-y1, y2 = correspondences.getCorrByIndices(0,1)
+y1, y2 = correspondences.getCorrByIndices(0,2)
 
 
 
-lab3.show_corresp(images[0], images[1], y1.T, y2.T)
+lab3.show_corresp(images[0], images[2], y1.T, y2.T)
 plt.show()
 
 """
     INIT1: Choose initial views I1 & I2
+"""
+
 """
 #Naive: choose 2 first img
 #y1 and y2 are the consensus set C
@@ -42,8 +44,23 @@ print("Initialize SfM pipeline...")
 #Fy1y2 = np.load("Fmatrix.npy", allow_pickle=True)
 
 F = Fy1y2[0]
-y1p = Fy1y2[1].T
-y2p = Fy1y2[2].T
+#y1p = Fy1y2[1].T
+#y2p = Fy1y2[2].T
+
+"""
+
+"""
+Den andra gruppens F
+F = np.array([[1.20899205e-08,  1.87079612e-07, 4.39313278e-04 ], [2.41307322e-07, -8.82954119e-09 , 7.81238182e-03 ], [ 5.75003645e-05 , -7.97164482e-03 , -1.74092676e-01 ]])
+"""
+#F, mask = cv.findFundamentalMat(y1,y2,cv.FM_RANSAC  )
+F = fun.getFFromLabCode(y1.T, y2.T)
+
+lab3.plot_eplines(F, y2.T, images[0].shape)
+plt.show()
+
+lab3.plot_eplines(F.T, y1.T, images[0].shape)
+plt.show()
 
 """
     INIT2: Get E = R,t from the two intial views
@@ -56,11 +73,11 @@ T_tables = Tables()
 E, K = fun.getEAndK(C, F)
 
 #Make the image coordinates homogenous
-y1 = fun.MakeHomogenous(K, y1p)
-y2 = fun.MakeHomogenous(K, y2p)
+y1 = fun.MakeHomogenous(K, y1)
+y2 = fun.MakeHomogenous(K, y2)
 
 #Get R and t from E
-R, t = fun.relative_camera_pose(E, y1[0,:2], y2[0,:2]) #Inpute is C-normalized coordinates
+R, t = fun.relative_camera_pose(E, y1[0,:2].T, y2[0,:2].T) #Inpute is C-normalized coordinates
 print(R)
 print(t)
 #Get first two camera poses
@@ -84,7 +101,7 @@ for i in range(y1.shape[0]):
     T_tables.addObs(y1[i], view_index_1, point_index)
     T_tables.addObs(y2[i], view_index_2, point_index)
 
-T_tables.plotProjections(0, K, images[0])
+T_tables.plotProjections(1, K, images[2])
 
 """
     Iterate through all images in sequence
@@ -101,6 +118,7 @@ for i in range(1,34,1):
     """
     #print("Bundle adjustment...")
     T_tables.BundleAdjustment2()
+    T_tables.plotProjections(1, K, images[2])
     #T_tables.plot()
     """
         WASH1: Remove bad 3D points. Re-triangulate & Remove outliers

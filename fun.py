@@ -83,7 +83,7 @@ def getCameraMatrices():
     points = sio.loadmat('BAdino2.mat')
     newPs = points['newPs']
     cameras = np.asarray(newPs.tolist())
-    
+
     return cameras
 
 def getEAndK(C, F):
@@ -207,53 +207,57 @@ def specSVD(M):
 def relative_camera_pose(E, y1, y2):
 
     #Inpute is C-normalized coordinates
-    U,S,Vh = specSVD(E)
+    U,S,VT = specSVD(E)
+    print("VT")
+    print(VT)
+    V = np.transpose(VT)
+
     W = np.zeros((3,3))
     W[0,1] = 1
     W[1,0] = -1
     W[2,2] = 1
 
-    R = np.transpose(Vh)@W@np.transpose(U)
-    R_prim = np.transpose(Vh)@np.transpose(W)@np.transpose(U)
+    print("W")
+    print(W)
 
-    V = np.transpose(Vh)
-    t1 = V[:,-1]
-    t2 = V[:,-1]*-1
+    VWU_T = V@W@np.transpose(U)
+    VW_TU_T = V@np.transpose(W)@np.transpose(U)
+
+    print("v3_pos")
+    v3_pos = V[:,-1]
+    v3_neg = V[:,-1]*-1
+    print(v3_pos)
 
     #C0 [I | 0]
     identity = CameraPose()
     C0 = np.zeros((3,4), dtype='double')
     C0[:3,:3] = np.eye(3)
 
-    C1 = CameraPose(R, t1)
-    C2 = CameraPose(R_prim, t1)
-    C3 = CameraPose(R, t2)
-    C4 = CameraPose(R_prim, t2)
+    C1 = CameraPose(VWU_T, v3_pos)
+    C2 = CameraPose(VW_TU_T, v3_pos)
+    C3 = CameraPose(VWU_T, v3_neg)
+    C4 = CameraPose(VW_TU_T, v3_neg)
 
     #case1
     x1 = lab3.triangulate_optimal(identity.GetCameraMatrix(), C1.GetCameraMatrix(), y1, y2)
-    x2 = (R@x1)+t1
+    x2 = (C1.R@x1)+C1.t
     if x1[-1] > 0 and x2[-1] > 0:
-
-        return R, t1
+        return C1.R, C1.t
     #case2
     x1 = lab3.triangulate_optimal(identity.GetCameraMatrix(), C2.GetCameraMatrix(), y1, y2)
-    x2 = (R@x1)+t2
+    x2 = (C2.R@x1)+C2.t
     if x1[-1] > 0 and x2[-1] > 0:
-
-        return R, t2
+        return C2.R, C2.t
     #case3
     x1 = lab3.triangulate_optimal(identity.GetCameraMatrix(), C3.GetCameraMatrix(), y1, y2)
-    x2 = (R_prim@x1)+t1
+    x2 = (C3.R@x1)+C3.t
     if x1[-1] > 0 and x2[-1] > 0:
-
-        return R_prim, t1
+        return C3.R, C3.t
     #case4
     x1 = lab3.triangulate_optimal(identity.GetCameraMatrix(), C4.GetCameraMatrix(), y1, y2)
-    x2 = (R_prim@x1)+t2
+    x2 = (C4.R@x1)+C4.t
     if x1[-1] > 0 and x2[-1] > 0:
-
-        return R_prim, t2
+        return C4.R, C4.t
 
 def camera_resectioning(C):
     A = C[0:3,0:3]
@@ -285,3 +289,83 @@ def reshapeToCamera3DPoints2(x0, n_C, n_P):
     Rktk = np.reshape(Rktk, [n_C, 3, 4])
     xj = np.reshape(xj, [n_P, 3])
     return Rktk, xj
+
+def getFFromLabCode(p1, p2):
+    """
+
+        RANSAC
+
+    """
+
+    F_RANSAC = None
+    S_RANSAC = []
+    d_RANSAC = []
+
+    r = 10000
+    for i in range(r):
+        #Pick 8 random points
+        index_points = np.arange(0, p1.shape[1], 1)
+        rand_index_8 = np.random.choice(index_points, 8, replace=False)
+        rand_points1_8 = p1[:,rand_index_8]
+        rand_points2_8 = p2[:,rand_index_8]
+
+        #Calculate F
+        F = lab3.fmatrix_stls(rand_points1_8, rand_points2_8)
+
+        #Calculate residuals
+        #d = lab3.fmatrix_residuals(F, rand_points1_8, rand_points2_8)
+        d = lab3.fmatrix_residuals(F, p1, p2)
+        d = np.max(np.abs(d), axis=0)
+        S = np.flatnonzero(d < 1.5)
+
+
+        if len(S) > len(S_RANSAC):
+            S_RANSAC = S
+            F_RANSAC = F
+            d_RANSAC = np.std(d)
+        elif len(S) == len(S_RANSAC):
+            if np.linalg.norm(d_RANSAC) > np.linalg.norm(d):
+                S_RANSAC = S
+                F_RANSAC = F
+                d_RANSAC = np.std(d)
+    """
+    plt.figure(0)
+    lab3.plot_eplines(F_RANSAC, p2, img[0].shape)
+    plt.figure(1)
+    lab3.plot_eplines(F_RANSAC.T, p1, img[1].shape)
+    plt.show()
+    """
+    """
+
+     Gold standard algorithm
+
+    """
+
+    #F_guess = lab3.fmatrix_stls(p1,p2)
+    F_guess = F_RANSAC
+    C1, C2 = lab3.fmatrix_cameras(F_guess)
+    X = np.zeros([3, p1.shape[1]])
+    inliers_feature_1 = p1[:,S_RANSAC]
+    inliers_feature_2 = p2[:,S_RANSAC]
+    """
+    for i in range(p1.shape[1]):
+    	X[:, i] = lab3.triangulate_linear(C1, C2, inliers_feature_1[:,i], inliers_feature_2[:,i])
+    """
+    X = np.vstack([lab3.triangulate_optimal(C1, C2, x1, x2) for x1, x2 in zip(inliers_feature_1.T, inliers_feature_2.T)])
+    X = X.T
+
+    params = np.hstack((C1.ravel(), X.T.ravel()))
+
+
+    least_squares_result = least_squares(lab3.fmatrix_residuals_gs, params, xtol=2.22e-16, tr_solver='lsmr', args=(inliers_feature_1,inliers_feature_2) )
+    solution = least_squares_result.x
+
+    # Extract cameras
+    C1 = solution[:12].reshape(3,4)
+    C2 = np.zeros((3,4)); C2[:3, :3] = np.eye(3)
+
+    # Extract 3D points
+    X = solution[12:].reshape(-1, 3).T
+
+    F_gold = lab3.fmatrix_from_cameras(C1, C2)
+    return F_gold
