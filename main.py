@@ -160,7 +160,6 @@ for i in range(1,34,1):
 
 
 
-
     """
         WASH2: Check elements not in C and remove either 3D points or observation
     """
@@ -172,6 +171,7 @@ for i in range(1,34,1):
     #print(y)
 
     # for each 3D point in T_points
+    deleted = 0
     for i,p in enumerate(T_tables.T_points) :
         # Only check if p is outlier if it exists
         # in more than n views
@@ -179,19 +179,24 @@ for i in range(1,34,1):
         if(n_views > 3) :
             residuals = np.empty((n_views,1))
             yp = T_tables.T_obs[p.observations_index]
-            for i,y in enumerate(yp) :
+            for j,y in enumerate(yp) :
                 C = T_tables.T_views[y.view_index]
                 p_homog = np.append(p.point[:,np.newaxis], 1)
                 p_proj = np.dot(C.camera_pose.GetCameraMatrix(), p_homog) # Project p with C
 
-                residuals[i] = np.linalg.norm(y.image_coordinates - p_proj)
+                residuals[j] = np.linalg.norm(y.image_coordinates - p_proj)
             # if all the projection errors are larger than a threshold
             # delete 3D point p (outlier)
             if(residuals.all() > 1.0) :
-                print("Delete point not implemented. :(")
-T_tables.plot()
+                deleted = residuals.shape[0]
+                print("Deleting points...")
+                print(T_tables.T_points.shape)
+                print(i)
+                T_tables.deletePoint(i)
+    print("Number of deleted outliers:")
+    if(deleted != 0) :
+        print(deleted)
+
 """
     After last iteration: Bundle Adjustment if outliers were removed since last BA
 """
-
-
