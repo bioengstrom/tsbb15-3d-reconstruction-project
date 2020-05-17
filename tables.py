@@ -59,16 +59,26 @@ class Tables:
         p_obs_idx = self.T_points[idx].observations_index
         for i in p_obs_idx :
             for C in self.T_views :
+                C.observations_index = C.observations_index[C.observations_index != i]
                 for j in range(C.observations_index.shape[0]) :
                     if(C.observations_index[j] > i) :
                         C.observations_index[j] -= 1
             for P in self.T_points :
+                P.observations_index = P.observations_index[P.observations_index != i]
                 for j in range(P.observations_index.shape[0]) :
                     if(P.observations_index[j] > i) :
                         P.observations_index[j] -= 1
             p_obs_idx = self.T_points[idx].observations_index
+
+        for o in self.T_obs :
+            if(o.point_3D_index >= idx) :
+                o.point_3D_index -= 1
+
         self.T_obs = np.delete(self.T_obs, p_obs_idx)
         self.T_points = np.delete(self.T_points, idx)
+
+
+
 
 
     def getObsAsArrays(self):
@@ -237,7 +247,7 @@ class Tables:
         for i in self.T_views:
             position = -1.0*(i.camera_pose.R.T @ i.camera_pose.t)
             ax.scatter(position[0], position[1], position[2], marker='^', color='black')
-        
+
         plt.show()
 
     def BundleAdjustment2(self):

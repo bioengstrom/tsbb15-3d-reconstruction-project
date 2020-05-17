@@ -77,7 +77,7 @@ def getCameraMatrices():
     cameras = sio.loadmat('imgdata/dino_Ps.mat')
     cameras = cameras['P']
     cameras = np.asarray(cameras.tolist())
-    
+
     """
     #load cleaned cameras
     points = sio.loadmat('BAdino2.mat')

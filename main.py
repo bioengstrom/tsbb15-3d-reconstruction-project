@@ -173,28 +173,34 @@ for i in range(1,34,1):
     # for each 3D point in T_points
     deleted = 0
     for i,p in enumerate(T_tables.T_points) :
+        if(i == T_tables.T_points.shape[0]-1) :
+            break
         # Only check if p is outlier if it exists
         # in more than n views
-        n_views = len(T_tables.T_obs[p.observations_index])
+        n_views = p.observations_index.shape[0]
         if(n_views > 3) :
             residuals = np.empty((n_views,1))
             yp = T_tables.T_obs[p.observations_index]
             for j,y in enumerate(yp) :
                 C = T_tables.T_views[y.view_index]
                 p_homog = np.append(p.point[:,np.newaxis], 1)
-                p_proj = np.dot(C.camera_pose.GetCameraMatrix(), p_homog) # Project p with C
 
+                P1 = C.camera_pose.GetCameraMatrix()
+                p_proj = P1 @ p_homog
+
+                #p_proj = np.dot(C.camera_pose.GetCameraMatrix(), p_homog) # Project p with C
+                print(np.linalg.norm(y.image_coordinates - p_proj))
                 residuals[j] = np.linalg.norm(y.image_coordinates - p_proj)
             # if all the projection errors are larger than a threshold
             # delete 3D point p (outlier)
-            if(residuals.all() > 1.0) :
+            print(residuals.all() > 1)
+            if(residuals.all() > 1) :
                 deleted = residuals.shape[0]
                 print("Deleting points...")
                 print(T_tables.T_points.shape)
                 print(i)
                 T_tables.deletePoint(i)
-        if(i+1 == T_tables.T_points.shape[0]) :
-            break
+§
     print("Number of deleted outliers:")
     if(deleted != 0) :
         print(deleted)
