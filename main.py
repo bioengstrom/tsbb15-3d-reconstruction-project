@@ -193,6 +193,8 @@ for i in range(1,34,1):
                 print(T_tables.T_points.shape)
                 print(i)
                 T_tables.deletePoint(i)
+        if(i+1 == T_tables.T_points.shape[0]) :
+            break
     print("Number of deleted outliers:")
     if(deleted != 0) :
         print(deleted)
