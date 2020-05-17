@@ -52,7 +52,11 @@ Den andra gruppens F
 F = np.array([[1.20899205e-08,  1.87079612e-07, 4.39313278e-04 ], [2.41307322e-07, -8.82954119e-09 , 7.81238182e-03 ], [ 5.75003645e-05 , -7.97164482e-03 , -1.74092676e-01 ]])
 """
 #F, mask = cv.findFundamentalMat(y1,y2,cv.FM_RANSAC  )
-F = fun.getFFromLabCode(y1.T, y2.T)
+#F = fun.getFFromLabCode(y1.T, y2.T)
+
+#np.save("Fmatrix", F)
+print("Initialize SfM pipeline...")
+F = np.load("Fmatrix.npy", allow_pickle=True)
 
 lab3.plot_eplines(F, y2.T, images[0].shape)
 plt.show()
@@ -113,6 +117,7 @@ for i in range(1,34,1):
         BA: Bundle Adjustment of all images so far
     """
     #print("Bundle adjustment...")
+    #T_tables.plot()
     T_tables.BundleAdjustment2()
     #T_tables.plotProjections(i, K, images[i])
     #T_tables.plot()
@@ -175,7 +180,7 @@ for i in range(1,34,1):
     for i,p in enumerate(T_tables.T_points) :
         # Only check if p is outlier if it exists
         # in more than n views
-        n_views = len(T_tables.T_obs[p.observations_index])
+        n_views = len(p.observations_index)
         if(n_views > 3) :
             residuals = np.empty((n_views,1))
             yp = T_tables.T_obs[p.observations_index]
@@ -187,7 +192,7 @@ for i in range(1,34,1):
                 residuals[j] = np.linalg.norm(y.image_coordinates - p_proj)
             # if all the projection errors are larger than a threshold
             # delete 3D point p (outlier)
-            if(residuals.all() > 1.0) :
+            if(residuals.all() > 0.99) :
                 deleted = residuals.shape[0]
                 print("Deleting points...")
                 print(T_tables.T_points.shape)
@@ -196,7 +201,7 @@ for i in range(1,34,1):
     print("Number of deleted outliers:")
     if(deleted != 0) :
         print(deleted)
-
+    T_tables.plot()
 """
     After last iteration: Bundle Adjustment if outliers were removed since last BA
 """
