@@ -1,7 +1,7 @@
 import numpy as np
 
 class CameraPose:
-    def __init__(self, R = np.identity(3), t = np.array([0.0, 0.0, 0.0])):
+    def __init__(self, R = np.eye(3), t = np.array([0.0, 0.0, 0.0])):
         self.R = R
         self.t = t
 

@@ -208,8 +208,7 @@ def relative_camera_pose(E, y1, y2):
 
     #Inpute is C-normalized coordinates
     U,S,VT = specSVD(E)
-    print("VT")
-    print(VT)
+
     V = np.transpose(VT)
 
     W = np.zeros((3,3))
@@ -217,16 +216,13 @@ def relative_camera_pose(E, y1, y2):
     W[1,0] = -1
     W[2,2] = 1
 
-    print("W")
-    print(W)
 
     VWU_T = V@W@np.transpose(U)
     VW_TU_T = V@np.transpose(W)@np.transpose(U)
 
-    print("v3_pos")
     v3_pos = V[:,-1]
     v3_neg = V[:,-1]*-1
-    print(v3_pos)
+
 
     #C0 [I | 0]
     identity = CameraPose()
@@ -357,7 +353,7 @@ def getFFromLabCode(p1, p2):
     params = np.hstack((C1.ravel(), X.T.ravel()))
 
 
-    least_squares_result = least_squares(lab3.fmatrix_residuals_gs, params, xtol=2.22e-16, tr_solver='lsmr', args=(inliers_feature_1,inliers_feature_2) )
+    least_squares_result = least_squares(lab3.fmatrix_residuals_gs, params, xtol=2.22e-14, tr_solver='lsmr', args=(inliers_feature_1,inliers_feature_2) )
     solution = least_squares_result.x
 
     # Extract cameras

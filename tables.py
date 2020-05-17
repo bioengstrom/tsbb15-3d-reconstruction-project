@@ -177,7 +177,7 @@ class Tables:
         return counter
 
     def plotProjections(self, index, K, image):
-
+        """
         the_points = np.zeros([0,3])
         for point in self.T_points:
             the_points = np.concatenate((the_points, [point.point]), axis = 0)
@@ -192,6 +192,16 @@ class Tables:
         #Show the image with interest points
         plt.imshow(image)
         plt.scatter(img_points[:,0], img_points[:,1], color='orange')
+        plt.show()
+        """
+        plt.imshow(image)
+        for point in self.T_points:
+            P1 = K @ self.T_views[index].camera_pose.GetCameraMatrix()
+            point3Dcoord = np.array([point.point[0], point.point[1], point.point[2],1.0])
+            proj1 = P1 @ point3Dcoord
+            proj1 = (proj1 / proj1[2])
+            proj1 = proj1[0:2]
+            plt.scatter(proj1[0], proj1[1], c= 'r', s = 40)
         plt.show()
 
     def plot(self):

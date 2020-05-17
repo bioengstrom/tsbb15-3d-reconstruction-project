@@ -24,11 +24,9 @@ C = fun.getCameraMatrices()
 
 #Get putative correspondence points
 correspondences = fun.Correspondences()
-y1, y2 = correspondences.getCorrByIndices(0,2)
+y1, y2 = correspondences.getCorrByIndices(0,1)
 
-
-
-lab3.show_corresp(images[0], images[2], y1.T, y2.T)
+lab3.show_corresp(images[0], images[1], y1.T, y2.T)
 plt.show()
 
 """
@@ -73,15 +71,14 @@ T_tables = Tables()
 E, K = fun.getEAndK(C, F)
 
 #Make the image coordinates homogenous
-y1 = fun.MakeHomogenous(K, y1)
-y2 = fun.MakeHomogenous(K, y2)
+y1_hom = fun.MakeHomogenous(K, y1)
+y2_hom = fun.MakeHomogenous(K, y2)
 
 #Get R and t from E
-R, t = fun.relative_camera_pose(E, y1[0,:2].T, y2[0,:2].T) #Inpute is C-normalized coordinates
-print(R)
-print(t)
+R, t = fun.relative_camera_pose(E, y1_hom[0,:2].T, y2_hom[0,:2].T) #Inpute is C-normalized coordinates
+
 #Get first two camera poses
-C1 = CameraPose()
+C1 = CameraPose() #No rotation and translation
 C2 = CameraPose(R,t)
 
 #Add the first two Views to the tables.
@@ -93,15 +90,14 @@ view_index_2 = T_tables.addView(1,C2)
     INIT3: Triangulate points.
 """
 
-
 for i in range(y1.shape[0]):
     #Triangulate points and add to tables
-    new_3D_point = lab3.triangulate_optimal(C1.GetCameraMatrix(), C2.GetCameraMatrix(), y1[i,:2], y2[i,:2])
+    new_3D_point = lab3.triangulate_optimal(C1.GetCameraMatrix(), C2.GetCameraMatrix(), y1_hom[i,:2], y2_hom[i,:2])
     point_index = T_tables.addPoint(new_3D_point)
-    T_tables.addObs(y1[i], view_index_1, point_index)
-    T_tables.addObs(y2[i], view_index_2, point_index)
+    T_tables.addObs(y1_hom[i], view_index_1, point_index)
+    T_tables.addObs(y2_hom[i], view_index_2, point_index)
 
-T_tables.plotProjections(1, K, images[2])
+T_tables.plotProjections(0, K, images[0])
 
 """
     Iterate through all images in sequence
@@ -118,7 +114,7 @@ for i in range(1,34,1):
     """
     #print("Bundle adjustment...")
     T_tables.BundleAdjustment2()
-    T_tables.plotProjections(1, K, images[2])
+    T_tables.plotProjections(i, K, images[i])
     #T_tables.plot()
     """
         WASH1: Remove bad 3D points. Re-triangulate & Remove outliers
