@@ -136,8 +136,8 @@ plt.show()
 reflectance = np.ones([points.shape[0],1])
 
 #Print points and normals to file
-result = np.append(points, reflectance, axis=1)
-result = np.append(result, colors, axis=1)
-result = np.append(result, normals, axis=1)
+result = np.append(points, normals, axis=1)
+#result = np.append(result, colors, axis=1)
+#result = np.append(result, normals, axis=1)
 np.savetxt("dino_normals.txt", result, delimiter=' ')
 print("Woop! Printed results to file :^)")
