@@ -4,8 +4,8 @@ import math # math.nan
 #import cmath # complex(x,y)
 
 # p3p using openCV
-def p3p(_3d_pts, img_pts, C):
-    R, t = cv2.solvePnP(_3d_pts, img_pts, C, cv2.SOLVEPNP_ITERATIVE)
+def p3p(_3d_pts, img_pts):
+    R, t = cv2.solvePnP(_3d_pts, img_pts, cv2.SOLVEPNP_ITERATIVE)
     
     return R, t
 
@@ -14,16 +14,20 @@ def mix(n, m):
     return (n, m, np.cross(n, m))
 
 def normalize(v): 
-    norm = np.linalg.norm(v, 1)
+    #norm = np.linalg.norm(v, 1)
+    #print(v[:2])
+    norm = np.linalg.norm(v[:2])
     
-    if norm < np.finfo(float).eps:
+    if np.abs(norm) < np.finfo(float).eps:
         raise ValueError("Normilization failed due to division by 0")
 
-    return v / norm
+    v[:2] = v[:2] / norm
+    
+    return v
 
 def get_eig_vector(m, r):
     c = r*r + m[0]*m[4] - r*(m[0] + m[4]) - m[1]*m[1]
-    
+
     a0 = (r*m[2] + m[1]*m[5] - m[2]*m[4]) / c
     a1 = (r*m[5] + m[1]*m[2] - m[0]*m[5]) / c
     
@@ -42,13 +46,14 @@ def eig_3x3_known_0(M):
     #print(m)
 
     p = np.zeros((3,1))
-    p2 = 1
+    p2 = 1.0
     p1 = m[0] - m[4] - m[8]
     p0 = -m[1]*m[1] - m[2]*m[2] - m[5]*m[5] + m[0]*m[4] + m[8] + m[4]*m[8]
     p = [p2, p1, p0]
     
     sigma0, sigma1 = np.roots(p)
-
+    #print(sigma0*sigma0 + p1*sigma0 + p0)
+    #print(sigma1*sigma1 + p1*sigma1 + p0)
     b0 = get_eig_vector(m, sigma0)
     b1 = get_eig_vector(m, sigma1)
 
@@ -57,30 +62,55 @@ def eig_3x3_known_0(M):
     else: 
         return [b1, b0, b2], sigma1, sigma0 
 
+
+def isCollinear(p):
+    arg0 = (p[1,1]-p[0,1])*(p[2,2]-p[0,2]) - (p[2,1]-p[0,1])*(p[1,2]-p[0,2])
+    arg1 = (p[2,0]-p[0,0])*(p[1,2]-p[0,2]) - (p[1,0]-p[0,0])*(p[2,2]-p[0,2])
+    arg2 = (p[1,0]-p[0,0])*(p[2,1]-p[0,1]) - (p[2,0]-p[0,0])*(p[1,1]-p[0,1]) 
+    if np.abs(arg0) + np.abs(arg1) + np.abs(arg2) < np.finfo(float).eps:
+        return True
+    return False 
+
+
 # p3p using twist
-def p3p_twist(x, y):
+def p3p_twist(y, x):
     # img_pts == y
     # _3d_pts == x
 
+    if isCollinear(y) == True:
+        raise ValueError("y should not be collinear")
+    if isCollinear(x) == True: 
+        raise ValueError("x should not be collinear")
+ 
+    #print(y[0,:])
+    #print(x)
     y_normalized = np.zeros(y.shape)
     y_normalized[0,:] = normalize(y[0,:]) 
     y_normalized[1,:] = normalize(y[1,:])
     y_normalized[2,:] = normalize(y[2,:])
 
+    #print(y_normalized[0,:])
     a = np.zeros(x.shape)
-    b = np.zeros(x.shape)    
+    b = np.zeros(y.shape)
+        
     for i in range(3):
         for j in range(3):
             a[i,j] = np.dot(x[i,:] - x[j,:], x[i,:] - x[j,:]) #should be square(sqrt(dot())), but unnecessary
-            b[i,j] = (y_normalized.T)[i,:] @ y_normalized[j,:] # make sure the correct one is transposed
+            b[i,j] = np.matmul(y_normalized[i,:].T, y_normalized[j,:])            
+    #print(a)
+    #print(b)
 
     M01 = np.asarray([[1, -b[0,1], 0], [-b[0,1], 1, 0], [0, 0, 0]])
     M02 = np.asarray([[1, 0, -b[0,2]], [0, 0, 0], [-b[0,2], 0, 1]])
     M12 = np.asarray([[0, 0, 0], [0, 1, -b[1,2]], [0, -b[1,2], 1]])
 
+    #print(M01)
+    #print(M02)
+    #print(M12)
+
     D1 = M01*a[1,2] - M12*a[0,1]
     D2 = M02*a[1,2] - M12*a[0,2]
-    
+
     # where dij is column j of the matrix Di.
     # Cumpute gamma by finding the solution to 0 = det(D_1 + gamma * D_2):
     c = np.zeros((4,1))
@@ -88,41 +118,49 @@ def p3p_twist(x, y):
     c2 = np.matmul(D2[:,0].T, np.cross(D1[:,1], D1[:,2])) + np.matmul(D2[:,1].T, np.cross(D1[:,2], D1[:,0])) + np.matmul(D2[:,2].T, np.cross(D1[:,0], D1[:,1]))
     c1 = np.matmul(D1[:,0].T, np.cross(D2[:,1], D2[:,2])) + np.matmul(D1[:,1].T, np.cross(D2[:,2], D2[:,0])) + np.matmul(D1[:,2].T, np.cross(D2[:,0], D2[:,1]))
     c0 = np.linalg.det(D1)
-    c = [c3, c2, c1, c0]
-
+    c = np.array([c3, c2, c1, c0]).T
+    
     roots = np.roots(c)
     #print(roots)
 
     gamma = math.nan
     for i in range(len(roots)):
         if np.isreal(roots[i]) == True: 
+            print(roots[i])
             gamma = roots[i].real
             break
 
     if gamma == math.nan:     
         raise ValueError("No real root found, therefore cannot determine D0")
 
+    polSolution = c3*gamma*gamma*gamma + c2*gamma*gamma + c1*gamma + c0 
+    #print(polSolution)    
+
+    #print(gamma)
     D0 = D1 + gamma * D2
-    print(np.linalg.det(D1 + gamma * D2))
+    #print(D0)
     print(np.linalg.det(D0))
+    
+    
     E, sigma0, sigma1 = eig_3x3_known_0(D0)
     
     E = np.array(E)
 
     S1 = E.T @ D0 @ E
     #print(S1)
-
+    #print(sigma0,sigma1)
     #print(E)
-
+    '''
     #s = np.sqrt((-sigma1)/sigma0)
     #s = [-s, s]
 
-
+    '''
 
 
     
     #print(sum(y_normalized[1,:]))
     #print(x)
+    return 0,0
 
 
 
