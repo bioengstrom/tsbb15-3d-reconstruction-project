@@ -5,6 +5,7 @@ from mpl_toolkits.mplot3d import Axes3D
 from matplotlib.patches import FancyArrowPatch
 from mpl_toolkits.mplot3d import proj3d
 import pandas as pd
+from tables import Tables
 
 def FractionRoot(x,y):
     if x >= 0:
@@ -72,6 +73,10 @@ def GetKNeighbours(points, tree, c1, c2, sigma, E=0.1, k0 = 15):
 """
 #Get point cloud data (PCD)
 points = np.genfromtxt("stanfordbunny.txt", delimiter=" ")
+dino_data = np.load("DinoVisalizationData.npy", allow_pickle=True)
+points = dino_data[0]
+colors = dino_data[1]/255.0 #Remove the /255.0 as soon as you create a new dino pickle with points cloud i.e. run main.py
+normals_sign = dino_data[2]
 
 #Create a KDTree with the point cloud
 tree = KDTree(points)
@@ -88,13 +93,15 @@ NN_indices = GetKNeighbours(points, tree, c1, c2, sigma)
 """
 
 #Naive implementation of indices
-r = 0.01
+r = 0.1
 NN_indices = tree.query_radius(points, r)
 NN_indices = np.array(NN_indices)
 
 """
     Calculate normals
 """
+
+
 normals = np.zeros(points.shape)
 
 for i in range(NN_indices.shape[0]):
@@ -102,24 +109,23 @@ for i in range(NN_indices.shape[0]):
     #Get normals for each set of neighbours for each point
     pi = points[NN_indices[i]]
     normals[i] = GetNormalOfPlaneFromPoints(pi)
+    if np.dot(normals[i], normals_sign[i]) < 0:
+        normals[i] = normals[i]*-1.0
+
 
 """
     Plot data
 """
-# Plot vector and selected k points for last point
-last_i = NN_indices.shape[0]-1
-pi = points[NN_indices[last_i]]
-not_selected_points = np.delete(points, NN_indices[last_i], axis=0)
+
 fig = plt.figure(figsize=(5,5))
 ax = fig.add_subplot(111, projection='3d')
-ax.plot(not_selected_points[:,0], not_selected_points[:,1], not_selected_points[:,2], 'o', markersize=10, color='b', alpha=0.2)
-ax.plot(pi[:,0], pi[:,1], pi[:,2], 'o', markersize=10, color='r', alpha=0.2)
+ax.scatter(points[:,0], points[:,1], points[:,2], 'o', color=colors)
 
 #Plot vector for normal
 ax.quiver(
-        points[last_i,0], points[last_i,1], points[last_i,2], # <-- starting point of vector
-        normals[last_i,0], normals[last_i,1], normals[last_i,2], # <-- directions of vector
-        arrow_length_ratio=0.001, color = 'red', alpha = 0.3, lw = 1
+        points[:,0], points[:,1], points[:,2], # <-- starting point of vector
+        normals[:,0], normals[:,1], normals[:,2], # <-- directions of vector
+        arrow_length_ratio=0.001, color = colors, alpha = 0.3, lw = 1
     )
 plt.show()
 
@@ -127,7 +133,11 @@ plt.show()
     Print to file
 """
 
+reflectance = np.ones([points.shape[0],1])
+
 #Print points and normals to file
-result = np.append(points, normals, axis=1)
-np.savetxt("bunny_normals.txt", result, delimiter=' ')
+result = np.append(points, reflectance, axis=1)
+result = np.append(result, colors, axis=1)
+result = np.append(result, normals, axis=1)
+np.savetxt("dino_normals.txt", result, delimiter=' ')
 print("Woop! Printed results to file :^)")

@@ -34,10 +34,12 @@ class Point_3D:
         return the_print
 
 class Observation:
-    def __init__(self, image_coordinates, view_index, point_3D_index):
+    def __init__(self, image_coordinates, view_index, point_3D_index, color):
         self.image_coordinates = image_coordinates
         self.view_index = view_index
         self.point_3D_index = point_3D_index
+        self.color = color
+
 
     def __str__(self):
         the_print = "OBSERVATION: "
@@ -47,6 +49,8 @@ class Observation:
         the_print += str(self.view_index)
         the_print += " 3D point index "
         the_print += str(self.point_3D_index)
+        the_print += " Color: "
+        the_print += str(self.color)
 
         return the_print
 
@@ -55,6 +59,9 @@ class View:
         self.image = image
         self.camera_pose = camera_pose
         self.observations_index = np.array([0], dtype = 'int')
+
+    def getWorldPosition(self):
+        return -1.0*(self.camera_pose.R.T @ self.camera_pose.t)
 
     def __str__(self):
         the_print = "VIEW: "

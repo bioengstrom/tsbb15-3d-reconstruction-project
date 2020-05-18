@@ -14,64 +14,46 @@ from tables import Tables
 from correspondences import Correspondences
 import fun as fun
 
+
 """
     Load data
 """
 #Get images and camera matrices
 print("Get images, camera matrices and correspondences...")
-images = fun.getImages()
+#Declare the tables to store the data
+print("Initialize tables...")
+T_tables = Tables()
 C = fun.getCameraMatrices()
 
 #Get putative correspondence points
 correspondences = fun.Correspondences()
 y1, y2 = correspondences.getCorrByIndices(0,1)
-
-lab3.show_corresp(images[0], images[1], y1.T, y2.T)
+"""
+lab3.show_corresp(T_tables.images[0], T_tables.images[1], y1.T, y2.T)
 plt.show()
-
+"""
 """
     INIT1: Choose initial views I1 & I2
-"""
-
-"""
-#Naive: choose 2 first img
-#y1 and y2 are the consensus set C
-Fy1y2 = fun.f_matrix(y1, y2)
-np.save("Fmatrix", Fy1y2)
-print("Initialize SfM pipeline...")
-#Fy1y2 = np.load("Fmatrix.npy", allow_pickle=True)
-
-F = Fy1y2[0]
-#y1p = Fy1y2[1].T
-#y2p = Fy1y2[2].T
-
-"""
-
-"""
-Den andra gruppens F
-F = np.array([[1.20899205e-08,  1.87079612e-07, 4.39313278e-04 ], [2.41307322e-07, -8.82954119e-09 , 7.81238182e-03 ], [ 5.75003645e-05 , -7.97164482e-03 , -1.74092676e-01 ]])
 """
 #F, mask = cv.findFundamentalMat(y1,y2,cv.FM_RANSAC  )
 #F = fun.getFFromLabCode(y1.T, y2.T)
 #Pickle F
 #np.save("Fmatrix", F)
 F = np.load("Fmatrix.npy", allow_pickle=True)
-
-lab3.plot_eplines(F, y2.T, images[0].shape)
+"""
+lab3.plot_eplines(F, y2.T, T_tables.images[0].shape)
 plt.show()
 
-lab3.plot_eplines(F.T, y1.T, images[0].shape)
+lab3.plot_eplines(F.T, y1.T, T_tables.images[0].shape)
 plt.show()
-
+"""
 """
     INIT2: Get E = R,t from the two intial views
 """
-#Declare the tables to store the data
-print("Initialize tables...")
-T_tables = Tables()
-
+print("Initialize SfM pipeline")
 #Vårt K
 E, K = fun.getEAndK(C, F)
+T_tables.K = K
 
 #Make the image coordinates homogenous
 y1_hom = fun.MakeHomogenous(K, y1)
@@ -92,16 +74,24 @@ view_index_2 = T_tables.addView(1,C2)
 """
     INIT3: Triangulate points.
 """
-T_tables.triangulateAndAddPoints(view_index_1, view_index_2, C1, C2, K, y1, y2, y1_hom, y2_hom)
+T_tables.triangulateAndAddPoints(view_index_1, view_index_2, C1, C2, y1_hom, y2_hom)
+T_tables.plot()
 
-T_tables.plotProjections(0, K, images[0])
-T_tables.plotProjections(1, K, images[1])
+
+T_tables.plotProjections(0, K, T_tables.images[0])
+T_tables.plotProjections(1, K, T_tables.images[1])
+
+
+data = T_tables.get3DPointsColorsAndNormals()
+print(data[0].shape)
+print(data[1].shape)
+print(data[2].shape)
+
+np.save("DinoVisalizationData", data)
+
 """
     Iterate through all images in sequence
 """
-# Array for re-projection errors. (36, number of points)
-#proj_err = np.empty(( ,images.shape[0]))
-#print(proj_err.shape)
 
 #for i in range(images.shape[0]-1):
 for i in range(1,34,1):
@@ -109,10 +99,9 @@ for i in range(1,34,1):
     """
         BA: Bundle Adjustment of all images so far
     """
-    #print("Bundle adjustment...")
+    print("Bundle adjustment...")
     T_tables.BundleAdjustment2()
-    #T_tables.plotProjections(i, K, images[i])
-    #T_tables.plot()
+
     """
         WASH1: Remove bad 3D points. Re-triangulate & Remove outliers
     """
@@ -139,9 +128,6 @@ for i in range(1,34,1):
     print("Adding view no:")
     print(i+1)
     A_y1, A_y2 = T_tables.addNewView(K, i+1, yp2_hom, yp3_hom, yp2, yp3)
-    #T_tables.plotProjections(i+1, K, images[i+1])
-    #T_tables.plot()
-
 
     """
         EXT4: Extend table with new row and insert image points in C. Algorithm 21.3
@@ -155,9 +141,6 @@ for i in range(1,34,1):
     print("Added n number of 3D points:")
     print(noOfPointsAdded)
 
-
-
-
     """
         WASH2: Check elements not in C and remove either 3D points or observation
     """
@@ -167,7 +150,7 @@ for i in range(1,34,1):
     #err = np.empty((len(T_tables.T_points)))
     #y = T_tables.T_points[
     #print(y)
-
+    """
     # for each 3D point in T_points
     for i,p in enumerate(T_tables.T_points) :
         # Only check if p is outlier if it exists
@@ -186,7 +169,11 @@ for i in range(1,34,1):
             # delete 3D point p (outlier)
             if(residuals.all() > 1.0) :
                 print("Delete point not implemented. :(")
+    """
 T_tables.plot()
 """
     After last iteration: Bundle Adjustment if outliers were removed since last BA
 """
+data = T_tables.get3DPointsColorsAndNormals()
+
+np.save("DinoVisalizationData", data)

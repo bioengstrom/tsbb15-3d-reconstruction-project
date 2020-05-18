@@ -8,6 +8,7 @@ import cv2 as cv
 import fun as fun
 from scipy.sparse import lil_matrix
 import lab3 as lab3
+import math
 
 class Tables:
 
@@ -15,6 +16,8 @@ class Tables:
         self.T_obs = np.array([], dtype = 'object')
         self.T_views = np.array([], dtype = 'object')
         self.T_points = np.array([], dtype = 'object')
+        self.images = fun.getImages()
+        self.K = np.zeros([3,3])
 
     def addView(self,image, pose):
         new_view = np.array([View(image, pose)])
@@ -27,10 +30,13 @@ class Tables:
         return self.T_points.size-1 #Return index to added item
 
     def addObs(self,coord, view_index, point_index):
-        new_obs = np.array([Observation(coord, view_index, point_index)])
+        not_hom_coords = self.K @ coord
+        color = self.images[view_index, int(not_hom_coords[1]),int(not_hom_coords[0])]
+        new_obs = np.array([Observation(coord, view_index, point_index, color)])
         self.T_obs = np.append(self.T_obs, new_obs)
         self.T_views[view_index].observations_index = np.concatenate((self.T_views[view_index].observations_index, [self.T_obs.size - 1]), axis = 0)
         self.T_points[point_index].observations_index = np.concatenate((self.T_points[point_index].observations_index, [self.T_obs.size - 1]), axis = 0)
+
 
     def __str__(self):
         print_array = np.vectorize(str, otypes=[object])
@@ -106,9 +112,6 @@ class Tables:
         #A is the set of putative correspondences that do not find any match
         A_y1 = np.zeros([0,2])
         A_y2 = np.zeros([0,2])
-        print("y1 shape add new view")
-        print(y1.shape)
-
 
         for i in range(y1.shape[0]):
             found = False
@@ -152,48 +155,27 @@ class Tables:
             #Add all image points to T_obs.
             self.addObs(y2, view_index, x)
 
-        print("A y1 y2")
-        print(A_y1.shape)
-        print(A_y2.shape)
-
         #return a set of putative correspondences between the images so far without 3D points
         return A_y1, A_y2
 
-    def addNewPoints(self, A_y1, A_y2, view_index_1, view_index_2):
+    def addNewPoints(self, A_y1_hom, A_y2_hom, view_index_1, view_index_2):
         C1 = self.T_views[view_index_1].camera_pose
         C2 = self.T_views[view_index_2].camera_pose
 
         E = fun.getEFromCameras(C1, C2)
         counter = 0
-        for i in range(A_y1.shape[0]):
+        for i in range(A_y1_hom.shape[0]):
             #Check epipolar constraint
-            #print(np.abs(y1.T @ E @ y2))
-            if np.abs(A_y1[i].T @ E @ A_y2[i]) < 0.1:
-                x = lab3.triangulate_optimal(C1.GetCameraMatrix(), C2.GetCameraMatrix(), A_y1[i], A_y2[i])
+            if np.abs(A_y1_hom[i].T @ E @ A_y2_hom[i]) < 0.1:
+                x = lab3.triangulate_optimal(C1.GetCameraMatrix(), C2.GetCameraMatrix(), A_y1_hom[i], A_y2_hom[i])
                 point_index = self.addPoint(x)
-                self.addObs(A_y1[i], view_index_1, point_index)
-                self.addObs(A_y2[i], view_index_2, point_index)
+                self.addObs(A_y1_hom[i], view_index_1, point_index)
+                self.addObs(A_y2_hom[i], view_index_2, point_index)
                 counter = counter + 1
         return counter
 
     def plotProjections(self, index, K, image):
 
-        the_points = np.zeros([0,3])
-        for point in self.T_points:
-            the_points = np.concatenate((the_points, [point.point]), axis = 0)
-
-        dist_coeffs = np.zeros((4,1)) # Assuming no lens distortion
-        last_camera = self.T_views[index].camera_pose
-        R = last_camera.R
-        t = last_camera.t
-        rvec, jac = cv.Rodrigues(R)
-        img_points, jac = cv.projectPoints(the_points[:,:3], rvec, t, K, dist_coeffs)
-        img_points = np.array(img_points[:,0,:])
-        #Show the image with interest points
-        plt.imshow(image)
-        plt.scatter(img_points[:,0], img_points[:,1], color='orange')
-        plt.show()
-        """
         plt.imshow(image)
         for point in self.T_points:
             P1 = K @ self.T_views[index].camera_pose.GetCameraMatrix()
@@ -203,23 +185,51 @@ class Tables:
             proj1 = proj1[0:2]
             plt.scatter(proj1[0], proj1[1], c= 'r', s = 40)
         plt.show()
-        """
-    def triangulateAndAddPoints(self, view_index_1, view_index_2, C1, C2, K, y1, y2, y1_hom, y2_hom):
 
-        for i in range(y1.shape[0]):
+    def getColorFor3DPoint(self, point):
+        color = np.zeros([0,3], dtype = 'float')
+        #Get all colors for the 3D point
+        for o in point.observations_index:
+            color = np.concatenate((color, [self.T_obs[o].color]), axis=0)
+
+        #Take the median of the colors
+        if len(point.observations_index) != 1:
+            color = np.mean(color, axis=0)
+        return color/255.0
+
+    def getNormalFor3DPoint(self, point):
+        vectorsToCameras = np.zeros([0,3])
+
+        #Get the vectors from the point to the cameras where it is visible
+        for o in point.observations_index:
+            view_index = self.T_obs[o].view_index
+            cameraPosition = self.T_views[view_index].getWorldPosition()
+            vector = cameraPosition - point.point
+            vectorsToCameras = np.concatenate((vectorsToCameras, [vector]), axis=0)
+
+        #Take the median of the colors
+        if len(point.observations_index) != 1:
+            normal = np.mean(vectorsToCameras, axis=0)
+
+        return normal
+
+    def get3DPointsColorsAndNormals(self):
+        points = np.zeros([0,3])
+        colors = np.zeros([0,3])
+        normals = np.zeros([0,3])
+
+        for p in self.T_points:
+            points = np.concatenate((points, [p.point]), axis=0)
+            colors = np.concatenate((colors, [self.getColorFor3DPoint(p)]), axis=0)
+            normals = np.concatenate((normals, [self.getNormalFor3DPoint(p)]), axis=0)
+
+        return points, colors, normals
+
+    def triangulateAndAddPoints(self, view_index_1, view_index_2, C1, C2, y1_hom, y2_hom):
+
+        for i in range(y1_hom.shape[0]):
             #Triangulate points and add to tables
-            #new_3D_point = lab3.triangulate_optimal(C1.GetCameraMatrix(), C2.GetCameraMatrix(), y1_hom[i,:2], y2_hom[i,:2])
-
-            #Open CV triangulering
-            the_points = np.concatenate((y1_hom[i,:2], y2_hom[i,:2]), axis=0)
-            cameras =  np.concatenate((C1.GetCameraMatrix(), C2.GetCameraMatrix()), axis=0)
-            cam0 = K @ C1.GetCameraMatrix()
-            cam1 = K @ C2.GetCameraMatrix()
-
-            new_3D_point = cv.triangulatePoints(cam0,cam1,y1[i],y2[i])
-            new_3D_point = new_3D_point/new_3D_point[3]
-            new_3D_point = new_3D_point[0:3, 0]
-
+            new_3D_point = lab3.triangulate_optimal(C1.GetCameraMatrix(), C2.GetCameraMatrix(), y1_hom[i,:2], y2_hom[i,:2])
             point_index = self.addPoint(new_3D_point)
             self.addObs(y1_hom[i], view_index_1, point_index)
             self.addObs(y2_hom[i], view_index_2, point_index)
@@ -227,10 +237,12 @@ class Tables:
     def plot(self):
         fig = plt.figure()
         ax = fig.add_subplot(111, projection='3d')
+
         for i in self.T_points:
-            ax.scatter(i.point[0], i.point[1], i.point[2], marker='o', color='orange')
+            color = self.getColorFor3DPoint(i)
+            ax.scatter(i.point[0], i.point[1], i.point[2], marker='o', color=color)
         for i in self.T_views:
-            position = -1.0*(i.camera_pose.R.T @ i.camera_pose.t)
+            position = i.getWorldPosition()
             ax.scatter(position[0], position[1], position[2], marker='^', color='black')
         plt.show()
 
@@ -335,7 +347,7 @@ class Tables:
         for i,o in enumerate(self.T_obs):
             camera_idx[i] = o.view_index
             point_idx[i] = o.point_3D_index
-        
+
 
         m = len(self.T_obs) * 2
         n = len(self.T_views) * 12 + len(self.T_points) * 3
@@ -345,7 +357,7 @@ class Tables:
         for s in range(12):
             A[2 * i, camera_idx * 12 + s] = 1
             A[2 * i + 1, camera_idx * 12 + s] = 1
-        
+
 
         for s in range(3):
             A[2 * i, len(self.T_views) * 12 + point_idx * 3 + s] = 1
