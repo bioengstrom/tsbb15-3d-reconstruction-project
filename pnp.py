@@ -4,14 +4,16 @@ import math # math.nan
 #import cmath # complex(x,y)
 
 # p3p using openCV
-def p3p(_3d_pts, img_pts):
-    R, t = cv2.solvePnP(_3d_pts, img_pts, cv2.SOLVEPNP_ITERATIVE)
-    
+
+def p3p(_3d_pts, img_pts, K):
+    R, t = cv2.solvePnP(_3d_pts, img_pts, K, cv2.SOLVEPNP_ITERATIVE)
+
     return R, t
 
 
 def mix(n, m):
     return (n, m, np.cross(n, m))
+
 
 def normalize(v): 
     #norm = np.linalg.norm(v, 1)
@@ -19,6 +21,7 @@ def normalize(v):
     norm = np.linalg.norm(v[:2])
     
     if np.abs(norm) < np.finfo(float).eps:
+
         raise ValueError("Normilization failed due to division by 0")
 
     v[:2] = v[:2] / norm
@@ -30,7 +33,7 @@ def get_eig_vector(m, r):
 
     a0 = (r*m[2] + m[1]*m[5] - m[2]*m[4]) / c
     a1 = (r*m[5] + m[1]*m[2] - m[0]*m[5]) / c
-    
+
     v = [a0, a1, 1]
     v = normalize(v)
 
@@ -40,7 +43,7 @@ def get_eig_vector(m, r):
 def eig_3x3_known_0(M):
     b2 = np.cross(M[:,1], M[:,2])
     b2 = normalize(b2)
-    
+
     m = M.flatten()
     #print(M)
     #print(m)
@@ -50,7 +53,7 @@ def eig_3x3_known_0(M):
     p1 = m[0] - m[4] - m[8]
     p0 = -m[1]*m[1] - m[2]*m[2] - m[5]*m[5] + m[0]*m[4] + m[8] + m[4]*m[8]
     p = [p2, p1, p0]
-    
+
     sigma0, sigma1 = np.roots(p)
     #print(sigma0*sigma0 + p1*sigma0 + p0)
     #print(sigma1*sigma1 + p1*sigma1 + p0)
@@ -59,8 +62,8 @@ def eig_3x3_known_0(M):
 
     if np.abs(sigma0) > np.abs(sigma1):
         return [b0, b1, b2], sigma0, sigma1
-    else: 
-        return [b1, b0, b2], sigma1, sigma0 
+    else:
+        return [b1, b0, b2], sigma1, sigma0
 
 
 def isCollinear(p):
@@ -85,7 +88,7 @@ def p3p_twist(y, x):
     #print(y[0,:])
     #print(x)
     y_normalized = np.zeros(y.shape)
-    y_normalized[0,:] = normalize(y[0,:]) 
+    y_normalized[0,:] = normalize(y[0,:])
     y_normalized[1,:] = normalize(y[1,:])
     y_normalized[2,:] = normalize(y[2,:])
 
@@ -93,6 +96,7 @@ def p3p_twist(y, x):
     a = np.zeros(x.shape)
     b = np.zeros(y.shape)
         
+
     for i in range(3):
         for j in range(3):
             a[i,j] = np.dot(x[i,:] - x[j,:], x[i,:] - x[j,:]) #should be square(sqrt(dot())), but unnecessary
@@ -125,12 +129,14 @@ def p3p_twist(y, x):
 
     gamma = math.nan
     for i in range(len(roots)):
+
         if np.isreal(roots[i]) == True: 
             print(roots[i])
+
             gamma = roots[i].real
             break
 
-    if gamma == math.nan:     
+    if gamma == math.nan:
         raise ValueError("No real root found, therefore cannot determine D0")
 
     polSolution = c3*gamma*gamma*gamma + c2*gamma*gamma + c1*gamma + c0 
@@ -143,7 +149,7 @@ def p3p_twist(y, x):
     
     
     E, sigma0, sigma1 = eig_3x3_known_0(D0)
-    
+
     E = np.array(E)
 
     S1 = E.T @ D0 @ E
@@ -157,7 +163,7 @@ def p3p_twist(y, x):
     '''
 
 
-    
+
     #print(sum(y_normalized[1,:]))
     #print(x)
     return 0,0
@@ -173,25 +179,25 @@ Input: A set of m 3D points: {xk} in homogeneous coordinates,m≥6
 Input: A set of m corresponding image points{yk}, in C-normalized homogeneous coordinates
 Output: (R| t), minimizing the algebraic error corresponding to Equation (15.35)
 
-1   foreach k=1, . . . , m do 
-2       foreach row∗ r_l ∈ [yk]_x do 
+1   foreach k=1, . . . , m do
+2       foreach row∗ r_l ∈ [yk]_x do
 3           a = vectorization of the 3×4 matrix r_l x_k^T, as a row vector
 4           Append this row at the bottom of A: A = [A;a]
 5       end
 6   end
 7   Determine C0 from data matrix A: (found in section 13.3)
 8       Use either the homogeneous method, or the inhomogeneous method, to find c0 in the null space ofA
-9       Reshape the vector c0 to 3×4 matrix C0 
+9       Reshape the vector c0 to 3×4 matrix C0
 10  Constraint enforcement of C0 = (A|b):
 11      Set τ = sign(det(A))
-12      SVD: τ*A = U @ S @ V^T 
+12      SVD: τ*A = U @ S @ V^T
 13      Set R = U @ V^T, λ = 3 * τ / trace(S), t = λ * b
-14      Return C = (R | t) 
+14      Return C = (R | t)
 15 ∗Possibly, use only two of the rows in [yk]_x since the 3 rows are linearly dependent
 
-http://liu.diva-portal.org/smash/get/diva2:1136229/FULLTEXT03.pdf 
+http://liu.diva-portal.org/smash/get/diva2:1136229/FULLTEXT03.pdf
 
-http://www.cvl.isy.liu.se/research/publications/PRE/0.40/main-pre-0.40.pdf 
+http://www.cvl.isy.liu.se/research/publications/PRE/0.40/main-pre-0.40.pdf
 
 http://openaccess.thecvf.com/content_ECCV_2018/papers/Mikael_Persson_Lambda_Twist_An_ECCV_2018_paper.pdf
 
@@ -202,8 +208,8 @@ http://openaccess.thecvf.com/content_ECCV_2018/papers/Mikael_Persson_Lambda_Twis
 def pnp_minimize(_3d_pts, img_pts, m):
 
     """PnP based on algebraic minimization
-    
-    Parameters 
+
+    Parameters
     ------------------
     3D points:
         A set of m 3D points: {_3d_pts} in homogeneous coordinates, m >= 6
@@ -218,15 +224,15 @@ def pnp_minimize(_3d_pts, img_pts, m):
         Which minimizies the algebraic error
     """
     A = []
-    
-    for k in range(m): 
+
+    for k in range(m):
         for i in range(len(img_pts[0])): #make sure it traversed along the rows. Maybe not the 3 rows
             a = img_pts[i,k] @ _3d_pts[k].T #should it be transpose on the 3d points??
             a = np.array(a).flatten() #Vectorize 3x4 matrix into a row vector
-           
+
             A.append(a) #Append a to A
 
-     
+
 
 
 
