@@ -209,7 +209,7 @@ class Tables:
 
         #Take the median of the colors
         if len(point.observations_index) != 1:
-            normal = np.mean(vectorsToCameras, axis=0)
+            normal = np.average(vectorsToCameras, axis=0)
 
         return normal
 

@@ -82,11 +82,6 @@ T_tables.plotProjections(0, K, T_tables.images[0])
 T_tables.plotProjections(1, K, T_tables.images[1])
 
 
-data = T_tables.get3DPointsColorsAndNormals()
-print(data[0].shape)
-print(data[1].shape)
-print(data[2].shape)
-
 np.save("DinoVisalizationData", data)
 
 """
@@ -176,4 +171,4 @@ T_tables.plot()
 """
 data = T_tables.get3DPointsColorsAndNormals()
 
-np.save("DinoVisalizationData", data)
+np.save("DinoVisalizationData_avgnormals", data)

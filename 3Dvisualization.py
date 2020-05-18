@@ -73,10 +73,10 @@ def GetKNeighbours(points, tree, c1, c2, sigma, E=0.1, k0 = 15):
 """
 #Get point cloud data (PCD)
 points = np.genfromtxt("stanfordbunny.txt", delimiter=" ")
-dino_data = np.load("DinoVisalizationData.npy", allow_pickle=True)
+dino_data = np.load("DinoVisalizationData_avgnormals.npy", allow_pickle=True)
 points = dino_data[0]
-colors = dino_data[1]/255.0 #Remove the /255.0 as soon as you create a new dino pickle with points cloud i.e. run main.py
-normals_sign = dino_data[2]
+colors = dino_data[1] #Remove the /255.0 as soon as you create a new dino pickle with points cloud i.e. run main.py
+normals = dino_data[2]
 
 #Create a KDTree with the point cloud
 tree = KDTree(points)
@@ -101,7 +101,7 @@ NN_indices = np.array(NN_indices)
     Calculate normals
 """
 
-
+"""
 normals = np.zeros(points.shape)
 
 for i in range(NN_indices.shape[0]):
@@ -111,7 +111,7 @@ for i in range(NN_indices.shape[0]):
     normals[i] = GetNormalOfPlaneFromPoints(pi)
     if np.dot(normals[i], normals_sign[i]) < 0:
         normals[i] = normals[i]*-1.0
-
+"""
 
 """
     Plot data
