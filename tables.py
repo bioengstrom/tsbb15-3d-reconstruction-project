@@ -8,6 +8,7 @@ import cv2 as cv
 import fun as fun
 from scipy.sparse import lil_matrix
 import lab3 as lab3
+from scipy.spatial.transform import Rotation as R
 
 class Tables:
 
@@ -270,13 +271,21 @@ class Tables:
         xj = np.empty((len(self.T_points),3))
         yij = np.empty((len(self.T_obs),3))
 
+        #Rk = np.empty((len(self.T_views), 3,3))
+        tk = np.empty((len(self.T_views), 3))
+        Rq = np.empty((len(self.T_views), 7))
+
         for i,o in enumerate(self.T_views.values()):
             Rktk[i] = o.camera_pose.GetCameraMatrix()
+            Rk = R.from_matrix(Rktk[i,:3,:3])
+            #print(Rk)
+            tk[i] = Rktk[i,:,-1]
+            Rq[i] = np.hstack([Rk.as_quat(), tk[i]])
         for i,o in enumerate(self.T_points.values()):
             xj[i] = o.point
         for i,o in enumerate(self.T_obs.values()):
             yij[i] = o.image_coordinates
-
+        
         x0 = np.hstack([Rktk.ravel(), xj.ravel()])
         #print(x0.shape)
         r = EpsilonBA(x0, yij[:,0],yij[:,1], self)
@@ -286,14 +295,14 @@ class Tables:
         #plt.figure()
         #plt.imshow(J_mask)
 
-        # plt.figure()
-        # plt.subplot(311)
-        # plt.plot(r)
-        #
-        # plt.subplot(312)
-        # plt.plot(result.fun)
-        #
-        # plt.show()
+        plt.figure()
+        plt.subplot(311)
+        plt.plot(r)
+        
+        plt.subplot(312)
+        plt.plot(result.fun)
+        
+        plt.show()
 
         n_C = len(self.T_views)
         n_P = len(self.T_points)
@@ -318,7 +327,7 @@ class Tables:
 
         J_mask = np.hstack((Jc,Jp))
         """
-
+        n_parameters = 12
         point_idx = np.empty((len(self.T_obs)))
         camera_idx = np.empty((len(self.T_obs)))
 
@@ -329,22 +338,22 @@ class Tables:
             camera_idx[i] = list(self.T_views.keys()).index(search_key2)
 
         m = len(self.T_obs) * 2
-        n = len(self.T_views) * 12 + len(self.T_points) * 3
+        n = len(self.T_views) * n_parameters + len(self.T_points) * 3
         A = lil_matrix((m, n), dtype = 'int')
 
         i = np.arange(len(self.T_obs))
-        for s in range(12):
-            A[2 * i, camera_idx * 12 + s] = 1
-            A[2 * i + 1, camera_idx * 12 + s] = 1
+        for s in range(n_parameters):
+            A[2 * i, camera_idx * n_parameters + s] = 1
+            A[2 * i + 1, camera_idx * n_parameters + s] = 1
 
 
         for s in range(3):
-            A[2 * i, len(self.T_views) * 12 + point_idx * 3 + s] = 1
-            A[2 * i + 1, len(self.T_views) * 12 + point_idx * 3 + s] = 1
+            A[2 * i, len(self.T_views) * n_parameters + point_idx * 3 + s] = 1
+            A[2 * i + 1, len(self.T_views) * n_parameters + point_idx * 3 + s] = 1
 
-        A[:,0:12] = 0
-        # plt.spy(A)
-        # plt.show()
+        A[:,0:n_parameters] = 0
+       # plt.spy(A)
+        #plt.show()
         return A
 
         #return J_mask

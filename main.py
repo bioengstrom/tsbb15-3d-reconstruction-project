@@ -52,11 +52,11 @@ Den andra gruppens F
 F = np.array([[1.20899205e-08,  1.87079612e-07, 4.39313278e-04 ], [2.41307322e-07, -8.82954119e-09 , 7.81238182e-03 ], [ 5.75003645e-05 , -7.97164482e-03 , -1.74092676e-01 ]])
 """
 #F, mask = cv.findFundamentalMat(y1,y2,cv.FM_RANSAC  )
-#F = fun.getFFromLabCode(y1.T, y2.T)
+F = fun.getFFromLabCode(y1.T, y2.T)
 
 #np.save("Fmatrix", F)
 print("Initialize SfM pipeline...")
-F = np.load("Fmatrix.npy", allow_pickle=True)
+#F = np.load("Fmatrix.npy", allow_pickle=True)
 
 lab3.plot_eplines(F, y2.T, images[0].shape)
 plt.show()
@@ -148,7 +148,7 @@ for i in range(1,34,1):
     #     #print("Deleting point..."§)
     #     dist_idx[:] = dist_idx[:] - 1
     #     #print(dist_idx)
-
+    """
     # Check for large reprojection errors
     delete_key = np.empty((0,1), dtype='int')
     for key in T_tables.T_points :
@@ -170,7 +170,7 @@ for i in range(1,34,1):
             residuals[k] = np.linalg.norm(y.image_coordinates - p_proj)
         # if all the projection errors are larger than a threshold
         # delete 3D point p (outlier)
-        r_bool = residuals > 0.01
+        r_bool = residuals > 0.001
 
         if(np.count_nonzero(r_bool) > 2) :
             print("Deleting points...")
@@ -178,6 +178,7 @@ for i in range(1,34,1):
             #T_tables.deletePoint2(j)
     for n in delete_key :
         T_tables.deletePoint2(n)
+    """
     """
         EXT1: Choose new view C
     """
@@ -196,7 +197,7 @@ for i in range(1,34,1):
     print("Adding view no:")
     print(i+1)
     A_y1, A_y2 = T_tables.addNewView(K, i+1, yp2_hom, yp3_hom, yp2, yp3)
-    T_tables.plotProjections(i+1, K, images[i+1])
+    #T_tables.plotProjections(i+1, K, images[i+1])
     #T_tables.plot()
 
 
