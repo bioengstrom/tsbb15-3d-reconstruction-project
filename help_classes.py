@@ -23,7 +23,8 @@ class CameraPose:
 class Point_3D:
     def __init__(self, point):
         self.point = point
-        self.observations_index = np.array([0], dtype = 'int')
+        #self.observations_index = np.array([0], dtype = 'int')
+        self.observations_index = np.zeros([0], dtype = 'int')
 
     def __str__(self):
         the_print = "3D point: "
@@ -54,7 +55,8 @@ class View:
     def __init__(self, image, camera_pose):
         self.image = image
         self.camera_pose = camera_pose
-        self.observations_index = np.array([0], dtype = 'int')
+        #self.observations_index = np.array([0], dtype = 'int')
+        self.observations_index = np.zeros([0], dtype = 'int')
 
     def __str__(self):
         the_print = "VIEW: "

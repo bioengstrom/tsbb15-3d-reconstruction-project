@@ -8,6 +8,7 @@ import cv2 as cv
 import fun as fun
 from scipy.sparse import lil_matrix
 import lab3 as lab3
+import time
 
 class Tables:
 
@@ -56,30 +57,48 @@ class Tables:
         # if T_points points to obs idx larger than idx: -1
         # Basically shifting every observations_index by -1 when an obs is deleted
 
+        print("T_obs index to delete: ")
+        print(self.T_points[idx].observations_index)
+        print(self.T_obs.shape)
+
         p_obs_idx = self.T_points[idx].observations_index
+        p_obs_idx2 = p_obs_idx
         for i in p_obs_idx :
             for C in self.T_views :
-                C.observations_index = C.observations_index[C.observations_index != i]
-                for j in range(C.observations_index.shape[0]) :
-                    if(C.observations_index[j] > i) :
-                        C.observations_index[j] -= 1
+                if i in C.observations_index :
+                    C.observations_index = C.observations_index[C.observations_index != i]
+
+                for k in range(C.observations_index.shape[0]) :
+                    if(C.observations_index[k] >= i) :
+                        print(i)
+                        print(C.observations_index)
+                        C.observations_index[k] -= 1
+                        print(C.observations_index)
+                        print("----------------------------")
+
             for P in self.T_points :
-                P.observations_index = P.observations_index[P.observations_index != i]
+                if i in P.observations_index :
+                    P.observations_index = P.observations_index[P.observations_index != i]
                 for j in range(P.observations_index.shape[0]) :
-                    if(P.observations_index[j] > i) :
+                    if(P.observations_index[j] >= i) :
                         P.observations_index[j] -= 1
             p_obs_idx = self.T_points[idx].observations_index
 
-        for o in self.T_obs :
+        for i,o in enumerate(self.T_obs) :
             if(o.point_3D_index >= idx) :
                 o.point_3D_index -= 1
 
-        self.T_obs = np.delete(self.T_obs, p_obs_idx)
+        print(p_obs_idx2)
+        self.T_obs = np.delete(self.T_obs, p_obs_idx2)
+        #for i,o in enumerate(self.T_points) :
+        #    print(self.T_points[i])
         self.T_points = np.delete(self.T_points, idx)
-
-
-
-
+        # print("----------------")
+        # for i,o in enumerate(self.T_points) :
+        #     print(self.T_points[i])
+        # plt.figure()
+        # plt.show()
+        print(self.T_obs.shape)
 
     def getObsAsArrays(self):
         yij = []
@@ -148,7 +167,7 @@ class Tables:
             #Got through all observations seen in last view added
             for v in self.T_views[len(self.T_views)-1].observations_index:
                 match = self.T_obs[v]
-                if np.linalg.norm(match.image_coordinates-y1_hom[i]) < 0.001:
+                if np.linalg.norm(match.image_coordinates-y1_hom[i]) < 0.01:
                     found = True
                     break
             #There is a corresponding 3D point x in T_points! Add y2, x to D
