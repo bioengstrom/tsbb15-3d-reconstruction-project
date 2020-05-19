@@ -83,7 +83,7 @@ def getCameraMatrices():
     points = sio.loadmat('BAdino2.mat')
     newPs = points['newPs']
     cameras = np.asarray(newPs.tolist())
-    
+
     return cameras
 
 def getEAndK(C, F):
@@ -285,3 +285,46 @@ def reshapeToCamera3DPoints2(x0, n_C, n_P):
     Rktk = np.reshape(Rktk, [n_C, 3, 4])
     xj = np.reshape(xj, [n_P, 3])
     return Rktk, xj
+
+# Alg 15.4 IREG
+def estRigidTransformation(a, b) :
+    # t.shape should be (N,3)
+    # Compute centroids
+    m = a.shape[0]
+    print(a.shape)
+    print(b.shape)
+
+    a0 = (1/m) * np.sum(a, axis=0)
+    b0 = (1/m) * np.sum(b, axis=0)
+
+    # Barycentric coordinates
+    A = a - a0
+    B = b - b0
+
+    #Plot
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+    #ax.scatter(a[:,0], a[:,1], a[:,2], marker='o', color='blue', alpha=0.2)
+    #ax.scatter(b[:,0], b[:,1], b[:,2], marker='o', color='red', alpha=0.2)
+    ax.scatter(A[:,0], A[:,1], A[:,2], marker='^', color='red', alpha=0.2)
+    ax.scatter(B[:,0], B[:,1], B[:,2], marker='^', color='blue', alpha=0.2)
+    #ax.scatter(a0[0], a0[1], a0[2], marker='o', color='black', alpha=1)
+    #ax.scatter(b0[0], b0[1], b0[2], marker='o', color='black', alpha=1)
+    plt.show()
+    print(A.shape)
+    print(B.T.shape)
+    M = A.T @ B
+    print(M)
+
+    # Determine R: Strict version of OPP, alg 15.1 IREG
+    #U, S, V_T = specSVD(M)
+    U, S, V_T = np.linalg.svd(M)
+    V = V_T.T
+
+    R = V @ U.T # Rotation matrix
+    print("Determinant, should be 1")
+    print(np.linalg.det(R))
+
+    t = b0 - (R@a0) # Translation vector
+
+    return R,t
