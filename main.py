@@ -82,7 +82,7 @@ T_tables.plotProjections(0, K, T_tables.images[0])
 T_tables.plotProjections(1, K, T_tables.images[1])
 
 
-np.save("DinoVisalizationData", data)
+#np.save("DinoVisalizationData", data)
 
 """
     Iterate through all images in sequence
