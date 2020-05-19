@@ -8,7 +8,6 @@ import cv2 as cv
 import fun as fun
 from scipy.sparse import lil_matrix
 import lab3 as lab3
-import time
 
 class Tables:
 
@@ -66,55 +65,6 @@ class Tables:
         return T_obs.
     """
 
-    def deletePoint(self, idx) :
-        # for each idx in T_obs to be deleted:
-        # if T_views points to obs idx larger than idx: -1
-        # if T_points points to obs idx larger than idx: -1
-        # Basically shifting every observations_index by -1 when an obs is deleted
-
-        print("T_obs index to delete: ")
-        print(self.T_points[idx].observations_index)
-        print(self.T_obs.shape)
-
-        p_obs_idx = self.T_points[idx].observations_index
-        p_obs_idx2 = p_obs_idx
-        for i in p_obs_idx :
-            for C in self.T_views :
-                if i in C.observations_index :
-                    C.observations_index = C.observations_index[C.observations_index != i]
-
-                for k in range(C.observations_index.shape[0]) :
-                    if(C.observations_index[k] >= i) :
-                        print(i)
-                        print(C.observations_index)
-                        C.observations_index[k] -= 1
-                        print(C.observations_index)
-                        print("----------------------------")
-
-            for P in self.T_points :
-                if i in P.observations_index :
-                    P.observations_index = P.observations_index[P.observations_index != i]
-                for j in range(P.observations_index.shape[0]) :
-                    if(P.observations_index[j] >= i) :
-                        P.observations_index[j] -= 1
-            p_obs_idx = self.T_points[idx].observations_index
-
-        for i,o in enumerate(self.T_obs) :
-            if(o.point_3D_index >= idx) :
-                o.point_3D_index -= 1
-
-        print(p_obs_idx2)
-        self.T_obs = np.delete(self.T_obs, p_obs_idx2)
-        #for i,o in enumerate(self.T_points) :
-        #    print(self.T_points[i])
-        self.T_points = np.delete(self.T_points, idx)
-        # print("----------------")
-        # for i,o in enumerate(self.T_points) :
-        #     print(self.T_points[i])
-        # plt.figure()
-        # plt.show()
-        print(self.T_obs.shape)
-
     def deletePoint2(self, key) :
 
         p_obs = self.T_points[key].observations_index
@@ -144,25 +94,6 @@ class Tables:
         xj = np.asarray(xj)
 
         return yij, Rktk, xj
-
-    def BundleAdjustment(self):
-        #y1 and y2 must be homogenous coordinates and normalized
-        def distance(y1, y2):
-            return np.abs(y1-y2)
-        #Function to minimise in order to do bundle adjustment. Input should be
-        #all observations so far
-        def EpsilonBA(x0, yij):
-            Rktk, xj = fun.reshapeToCamera3DPoints(x0)
-            return np.sum(distance(yij[:,:,None],Rktk @ xj[:,:,None])**2)
-
-        #Get arrays from objects
-        yij, Rktk, xj = self.getObsAsArrays()
-
-        x0 = np.hstack([Rktk.flatten(), xj.flatten()])
-        result = least_squares(EpsilonBA, x0, args=([yij]))
-        new_pose, new_points = fun.reshapeToCamera3DPoints(result.x)
-
-        self.updateCameras3Dpoints(new_pose, new_points[:,:3])
 
     def updateCameras3Dpoints(self, new_pose, new_points):
         print(new_pose[0,:,3].shape)
@@ -289,9 +220,9 @@ class Tables:
         ax.set_xlim([-5, 5])
         ax.set_ylim([-5, 5])
         ax.set_zlim([0, 10])
-        for i in self.T_points:
+        for i in self.T_points.values():
             ax.scatter(i.point[0], i.point[1], i.point[2], marker='o', color='orange')
-        for i in self.T_views:
+        for i in self.T_views.values():
             position = -1.0*(i.camera_pose.R.T @ i.camera_pose.t)
             ax.scatter(position[0], position[1], position[2], marker='^', color='black')
 
@@ -315,13 +246,6 @@ class Tables:
                 xj[i] = np.append(xj[i][:,np.newaxis], 1)
 
             r = np.empty(([len(u)*2]))
-            #print((ck1*xj).sum(axis=1).shape)
-            #print((ck1[0,:]*xj[0,:]).sum(axis=1))
-            #print(c)
-            #print(xj)
-            #print(ck1*xj)
-            #print(ukj)
-            #print((ck1*xj).sum(axis=1)/(ck3*xj).sum(axis=1))
 
             for i,o in enumerate (The_table.T_obs.values()):
                 c = Rktk[o.view_index]
@@ -361,16 +285,16 @@ class Tables:
         #J_mask = self.sparsity_mask()
         #plt.figure()
         #plt.imshow(J_mask)
-        """
-        plt.figure()
-        plt.subplot(311)
-        plt.plot(r)
 
-        plt.subplot(312)
-        plt.plot(result.fun)
+        # plt.figure()
+        # plt.subplot(311)
+        # plt.plot(r)
+        #
+        # plt.subplot(312)
+        # plt.plot(result.fun)
+        #
+        # plt.show()
 
-        plt.show()
-        """
         n_C = len(self.T_views)
         n_P = len(self.T_points)
         new_pose, new_points = fun.reshapeToCamera3DPoints2(self, result.x, n_C, n_P)
@@ -394,22 +318,20 @@ class Tables:
 
         J_mask = np.hstack((Jc,Jp))
         """
-        camera_idx = np.empty(len(self.T_obs))
-        point_idx = np.empty(len(self.T_obs))
+
+        point_idx = np.empty((len(self.T_obs)))
+        camera_idx = np.empty((len(self.T_obs)))
 
         for i,o in enumerate(self.T_obs.values()):
-            camera_idx[i] = o.view_index
-            point_idx[i] = o.point_3D_index
+            search_key1 = o.point_3D_index
+            point_idx[i] = list(self.T_points.keys()).index(search_key1)
+            search_key2 = o.view_index
+            camera_idx[i] = list(self.T_views.keys()).index(search_key2)
 
-        print(camera_idx)
-        print(point_idx)
-        print(len(point_idx))
         m = len(self.T_obs) * 2
         n = len(self.T_views) * 12 + len(self.T_points) * 3
         A = lil_matrix((m, n), dtype = 'int')
-        print(n)
-        plt.figure()
-        plt.show()
+
         i = np.arange(len(self.T_obs))
         for s in range(12):
             A[2 * i, camera_idx * 12 + s] = 1
@@ -421,8 +343,8 @@ class Tables:
             A[2 * i + 1, len(self.T_views) * 12 + point_idx * 3 + s] = 1
 
         A[:,0:12] = 0
-        #plt.spy(A)
-        #plt.show()
+        # plt.spy(A)
+        # plt.show()
         return A
 
         #return J_mask

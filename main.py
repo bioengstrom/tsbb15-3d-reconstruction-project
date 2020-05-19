@@ -134,8 +134,8 @@ for i in range(1,34,1):
     #Remove potential outliers from T_points after bundle adjustment
 
     # Check for large changes in position before and after BA
-    # dist = np.empty((T_tables.T_points.shape[0]))
-    # for j,p in enumerate(T_tables.T_points):
+    # dist = np.empty((len(T_tables.T_points)))
+    # for j,p in enumerate(T_tables.T_points.values()):
     #     dist[j] = np.linalg.norm(p.point - preBA[j])
     # #print(dist)
     # #print(dist.shape)
@@ -148,20 +148,20 @@ for i in range(1,34,1):
     #     #print("Deleting point..."§)
     #     dist_idx[:] = dist_idx[:] - 1
     #     #print(dist_idx)
-    #
-    # # Check for large reprojection errors
-    delete_idx = np.empty((0,1), dtype='int')
-    for j,p in enumerate(T_tables.T_points.values()) :
+
+    # Check for large reprojection errors
+    delete_key = np.empty((0,1), dtype='int')
+    for key in T_tables.T_points :
         #if(j == len(T_tables.T_points)-1) :
         #    break
         # Only check if p is outlier if it exists
         # in more than n views
-        residuals = np.empty((p.observations_index.shape[0],1))
+        residuals = np.empty((T_tables.T_points[key].observations_index.shape[0],1))
         #yp = T_tables.T_obs[p.observations_index]
-        for k,o in enumerate(p.observations_index) :
+        for k,o in enumerate(T_tables.T_points[key].observations_index) :
             y = T_tables.T_obs[o]
             C = T_tables.T_views[y.view_index]
-            p_homog = np.append(p.point[:,np.newaxis], 1)
+            p_homog = np.append(T_tables.T_points[key].point[:,np.newaxis], 1)
 
             P1 = C.camera_pose.GetCameraMatrix()
             p_proj = P1 @ p_homog
@@ -170,12 +170,13 @@ for i in range(1,34,1):
             residuals[k] = np.linalg.norm(y.image_coordinates - p_proj)
         # if all the projection errors are larger than a threshold
         # delete 3D point p (outlier)
-        r_bool = residuals > 0.001
+        r_bool = residuals > 0.01
+
         if(np.count_nonzero(r_bool) > 2) :
             print("Deleting points...")
-            delete_idx = np.append(delete_idx, j)
+            delete_key = np.append(delete_key, key)
             #T_tables.deletePoint2(j)
-    for n in delete_idx :
+    for n in delete_key :
         T_tables.deletePoint2(n)
     """
         EXT1: Choose new view C
@@ -216,7 +217,7 @@ for i in range(1,34,1):
     """
         WASH2: Check elements not in C and remove either 3D points or observation
     """
-T_tables.plot()
+    T_tables.plot()
 """
     After last iteration: Bundle Adjustment if outliers were removed since last BA
 """
