@@ -225,6 +225,17 @@ class Tables:
 
         return points, colors, normals
 
+    def getCamerasForEvaluation(self):
+        Rs = np.zeros([0,3,3])
+        ts = np.zeros([0,3])
+
+        for v in self.T_views:
+            Rs = np.concatenate((Rs, [v.camera_pose.R]), axis=0)
+            ts = np.concatenate((ts, [v.camera_pose.t]), axis=0)
+
+        return Rs, ts
+
+
     def triangulateAndAddPoints(self, view_index_1, view_index_2, C1, C2, y1_hom, y2_hom):
 
         for i in range(y1_hom.shape[0]):

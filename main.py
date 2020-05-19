@@ -82,6 +82,7 @@ T_tables.plotProjections(0, K, T_tables.images[0])
 T_tables.plotProjections(1, K, T_tables.images[1])
 
 
+
 #np.save("DinoVisalizationData", data)
 
 """
@@ -169,6 +170,12 @@ T_tables.plot()
 """
     After last iteration: Bundle Adjustment if outliers were removed since last BA
 """
-data = T_tables.get3DPointsColorsAndNormals()
 
-np.save("DinoVisalizationData_avgnormals", data)
+#Save data for visualization
+vis_data = T_tables.get3DPointsColorsAndNormals()
+np.save("DinoVisalizationData_avgnormals", vis_data)
+
+#Save data for evaluation
+R, t = T_tables.getCamerasForEvaluation()
+np.save("R_eval_clean", R)
+np.save("t_eval_clean", t)
