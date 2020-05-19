@@ -127,7 +127,7 @@ class Tables:
             #Got through all observations seen in last view added
             for v in self.T_views[len(self.T_views)-1].observations_index:
                 match = self.T_obs[v]
-                if np.linalg.norm(match.image_coordinates-y1_hom[i]) < 0.01:
+                if np.linalg.norm(match.image_coordinates-y1_hom[i]) < 0.0001:
                     found = True
                     break
             #There is a corresponding 3D point x in T_points! Add y2, x to D
@@ -286,7 +286,7 @@ class Tables:
         for i,o in enumerate(self.T_obs.values()):
             yij[i] = o.image_coordinates
         
-        x0 = np.hstack([Rktk.ravel(), xj.ravel()])
+        x0 = np.hstack([Rq.ravel(), xj.ravel()])
         #print(x0.shape)
         r = EpsilonBA(x0, yij[:,0],yij[:,1], self)
         result = least_squares(EpsilonBA, x0, args=([yij[:,0],yij[:,1], self]), jac_sparsity=self.sparsity_mask(), verbose=2, x_scale='jac', ftol=1e-4, method='trf')
@@ -327,7 +327,7 @@ class Tables:
 
         J_mask = np.hstack((Jc,Jp))
         """
-        n_parameters = 12
+        n_parameters = 7
         point_idx = np.empty((len(self.T_obs)))
         camera_idx = np.empty((len(self.T_obs)))
 

@@ -74,17 +74,17 @@ def getImages():
 
 def getCameraMatrices():
     #Load noisy cameras
-    """
+    
     cameras = sio.loadmat('imgdata/dino_Ps.mat')
     cameras = cameras['P']
     cameras = np.asarray(cameras.tolist())
-    """
     
+    """
     #load cleaned cameras
     points = sio.loadmat('BAdino2.mat')
     newPs = points['newPs']
     cameras = np.asarray(newPs.tolist())
-    
+    """
 
     return cameras
 
@@ -282,7 +282,7 @@ def camera_resectioning(C):
 def reshapeToCamera3DPoints2(table, x0, n_C, n_P):
     #ratio = int((x0.shape[0]/16)*12)
     #size = int(ratio/(3*4))
-    """
+    
     Rktk = x0[:n_C*7]
     Rqtk = Rktk[:7*n_C]
     Rqtk = np.reshape(Rqtk, [n_C, 7])
@@ -297,14 +297,15 @@ def reshapeToCamera3DPoints2(table, x0, n_C, n_P):
         temp = np.array([tk[i,:]])
         Rktk[i] = np.concatenate((Rk[i,:,:],temp.T), axis = 1)
     
-     xj = x0[n_C*7:]
+    xj = x0[n_C*7:]
+    
     """
     Rktk = x0[:n_C*12]
     xj = x0[n_C*12:]
     Rktk = np.reshape(Rktk, [n_C, 3, 4])
-   
+   """
     xj = np.reshape(xj, [n_P, 3])
-    """
+    
     Rt = {}
     x = {}
     for i,key in enumerate(table.T_points) :
@@ -313,8 +314,6 @@ def reshapeToCamera3DPoints2(table, x0, n_C, n_P):
         Rt[key] = Rktk[i]
 
     return Rt, x
-    """
-    return Rktk, xj
 def getFFromLabCode(p1, p2):
     """
 
