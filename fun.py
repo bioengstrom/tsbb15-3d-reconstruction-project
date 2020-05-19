@@ -278,14 +278,21 @@ def camera_resectioning(C):
         t = -1*D@t
     return K,R,t
 
-def reshapeToCamera3DPoints2(x0, n_C, n_P):
+def reshapeToCamera3DPoints2(table, x0, n_C, n_P):
     #ratio = int((x0.shape[0]/16)*12)
     #size = int(ratio/(3*4))
     Rktk = x0[:n_C*12]
     xj = x0[n_C*12:]
     Rktk = np.reshape(Rktk, [n_C, 3, 4])
     xj = np.reshape(xj, [n_P, 3])
-    return Rktk, xj
+    Rt = {}
+    x = {}
+    for i,key in enumerate(table.T_points) :
+        x[key] = xj[i]
+    for i,key in enumerate(table.T_views) :
+        Rt[key] = Rktk[i]
+
+    return Rt, x
 
 def getFFromLabCode(p1, p2):
     """

@@ -118,7 +118,7 @@ for i in range(1,34,1):
     """
     preBA = np.zeros([0,3])
 
-    for p in T_tables.T_points:
+    for p in T_tables.T_points.values():
         preBA = np.concatenate((preBA, [p.point]), axis=0)
     #print("Bundle adjustment...")
     #T_tables.plot()
@@ -134,31 +134,32 @@ for i in range(1,34,1):
     #Remove potential outliers from T_points after bundle adjustment
 
     # Check for large changes in position before and after BA
-    dist = np.empty((T_tables.T_points.shape[0]))
-    for j,p in enumerate(T_tables.T_points):
-        dist[j] = np.linalg.norm(p.point - preBA[j])
-    #print(dist)
-    #print(dist.shape)
-    dist_idx = np.argwhere(dist > 1)
-    #print(dist_idx)
-    # Delete 3D point where larger than x
-    for j in range(dist_idx.shape[0]) :
-        #print(dist_idx[j,0])
-        T_tables.deletePoint(dist_idx[j,0])
-        #print("Deleting point..."§)
-        dist_idx[:] = dist_idx[:] - 1
-        #print(dist_idx)
-
-    # Check for large reprojection errors
-    deleted = 0
-    for j,p in enumerate(T_tables.T_points) :
-        if(j == T_tables.T_points.shape[0]-1) :
-            break
+    # dist = np.empty((T_tables.T_points.shape[0]))
+    # for j,p in enumerate(T_tables.T_points):
+    #     dist[j] = np.linalg.norm(p.point - preBA[j])
+    # #print(dist)
+    # #print(dist.shape)
+    # dist_idx = np.argwhere(dist > 1)
+    # #print(dist_idx)
+    # # Delete 3D point where larger than x
+    # for j in range(dist_idx.shape[0]) :
+    #     #print(dist_idx[j,0])
+    #     T_tables.deletePoint(dist_idx[j,0])
+    #     #print("Deleting point..."§)
+    #     dist_idx[:] = dist_idx[:] - 1
+    #     #print(dist_idx)
+    #
+    # # Check for large reprojection errors
+    delete_idx = np.empty((0,1), dtype='int')
+    for j,p in enumerate(T_tables.T_points.values()) :
+        #if(j == len(T_tables.T_points)-1) :
+        #    break
         # Only check if p is outlier if it exists
         # in more than n views
         residuals = np.empty((p.observations_index.shape[0],1))
-        yp = T_tables.T_obs[p.observations_index]
-        for k,y in enumerate(yp) :
+        #yp = T_tables.T_obs[p.observations_index]
+        for k,o in enumerate(p.observations_index) :
+            y = T_tables.T_obs[o]
             C = T_tables.T_views[y.view_index]
             p_homog = np.append(p.point[:,np.newaxis], 1)
 
@@ -172,10 +173,10 @@ for i in range(1,34,1):
         r_bool = residuals > 0.001
         if(np.count_nonzero(r_bool) > 2) :
             print("Deleting points...")
-            #print(residuals)
-            T_tables.deletePoint(j)
-    print(T_tables.T_points.shape[0])
-    print(T_tables.T_obs.shape[0])
+            delete_idx = np.append(delete_idx, j)
+            #T_tables.deletePoint2(j)
+    for n in delete_idx :
+        T_tables.deletePoint2(n)
     """
         EXT1: Choose new view C
     """

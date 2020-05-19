@@ -13,25 +13,40 @@ import time
 class Tables:
 
     def __init__(self):
-        self.T_obs = np.array([], dtype = 'object')
-        self.T_views = np.array([], dtype = 'object')
-        self.T_points = np.array([], dtype = 'object')
+        self.T_obs = {}
+        self.T_views = {}
+        self.T_points = {}
+        self.o_key = 0
+        self.v_key = 0
+        self.p_key = 0
+        #self.T_obs = np.array([], dtype = 'object')
+        #self.T_views = np.array([], dtype = 'object')
+        #self.T_points = np.array([], dtype = 'object')
 
     def addView(self,image, pose):
-        new_view = np.array([View(image, pose)])
-        self.T_views = np.append(self.T_views, new_view)
-        return self.T_views.size-1 #Return index to added item
+        self.T_views[self.v_key] = View(image, pose)
+        self.v_key = self.v_key + 1
+        #new_view = np.array([View(image, pose)])
+        #self.T_views = np.append(self.T_views, new_view)
+        return self.v_key-1 #Return index to added item
 
     def addPoint(self,coord):
-        new_point = np.array([Point_3D(coord)])
-        self.T_points = np.append(self.T_points, new_point)
-        return self.T_points.size-1 #Return index to added item
+        self.T_points[self.p_key] = Point_3D(coord)
+        self.p_key = self.p_key + 1
+        #new_point = np.array([Point_3D(coord)])
+        #self.T_points = np.append(self.T_points, new_point)
+        return self.p_key-1 #Return index to added item
 
-    def addObs(self,coord, view_index, point_index):
-        new_obs = np.array([Observation(coord, view_index, point_index)])
-        self.T_obs = np.append(self.T_obs, new_obs)
-        self.T_views[view_index].observations_index = np.concatenate((self.T_views[view_index].observations_index, [self.T_obs.size - 1]), axis = 0)
-        self.T_points[point_index].observations_index = np.concatenate((self.T_points[point_index].observations_index, [self.T_obs.size - 1]), axis = 0)
+    def addObs(self,coord, view_key, point_key):
+        self.T_obs[self.o_key] = Observation(coord, view_key, point_key)
+        self.o_key = self.o_key + 1
+        self.T_views[view_key].observations_index = np.concatenate((self.T_views[view_key].observations_index, [self.o_key - 1]), axis = 0)
+        self.T_points[point_key].observations_index = np.concatenate((self.T_points[point_key].observations_index, [self.o_key - 1]), axis = 0)
+
+        #new_obs = np.array([Observation(coord, view_index, point_index)])
+        #self.T_obs = np.append(self.T_obs, new_obs)
+        #self.T_views[view_index].observations_index = np.concatenate((self.T_views[view_index].observations_index, [self.T_obs.size - 1]), axis = 0)
+        #self.T_points[point_index].observations_index = np.concatenate((self.T_points[point_index].observations_index, [self.T_obs.size - 1]), axis = 0)
 
     def __str__(self):
         print_array = np.vectorize(str, otypes=[object])
@@ -99,6 +114,19 @@ class Tables:
         # plt.figure()
         # plt.show()
         print(self.T_obs.shape)
+
+    def deletePoint2(self, key) :
+
+        p_obs = self.T_points[key].observations_index
+
+        for v in self.T_views.values() :
+            for i in p_obs :
+                v.observations_index = v.observations_index[v.observations_index != i]
+
+        for i in p_obs:
+            self.T_obs.pop(i)
+
+        self.T_points.pop(key)
 
     def getObsAsArrays(self):
         yij = []
@@ -246,7 +274,7 @@ class Tables:
         plt.show()
         """
         plt.imshow(image)
-        for point in self.T_points:
+        for point in self.T_points.values():
             P1 = K @ self.T_views[index].camera_pose.GetCameraMatrix()
             point3Dcoord = np.array([point.point[0], point.point[1], point.point[2],1.0])
             proj1 = P1 @ point3Dcoord
@@ -276,13 +304,15 @@ class Tables:
         #Function to minimise in order to do bundle adjustment. Input should be
         #all observations so far
         def EpsilonBA(x0, u, v, The_table):
-            n_C = The_table.T_views.shape[0]
-            n_P = The_table.T_points.shape[0]
+            n_C = len(The_table.T_views)
+            n_P = len(The_table.T_points)
 
-            Rktk, xj = fun.reshapeToCamera3DPoints2(x0, n_C, n_P)
-            xj_h = np.zeros((xj.shape[0], 4), dtype='double')
-            xj_h[:,:3] = xj[:,:3]
-            xj_h[:,-1] = 1
+            Rktk, xj = fun.reshapeToCamera3DPoints2(The_table, x0, n_C, n_P)
+            #xj_h = np.zeros((len(xj), 4), dtype='double')
+            #xj_h[:,:3] = xj[:,:3]
+            #xj_h[:,-1] = 1
+            for i in xj :
+                xj[i] = np.append(xj[i][:,np.newaxis], 1)
 
             r = np.empty(([len(u)*2]))
             #print((ck1*xj).sum(axis=1).shape)
@@ -293,12 +323,12 @@ class Tables:
             #print(ukj)
             #print((ck1*xj).sum(axis=1)/(ck3*xj).sum(axis=1))
 
-            for i,o in enumerate (The_table.T_obs):
+            for i,o in enumerate (The_table.T_obs.values()):
                 c = Rktk[o.view_index]
                 c1 = c[0,:]
                 c2 = c[1,:]
                 c3 = c[2,:]
-                x = xj_h[o.point_3D_index]
+                x = xj[o.point_3D_index]
 
                 r[i*2] = u[i] - (np.dot(c1,x)/np.dot(c3,x))
                 r[(i*2)+1] = v[i] - (np.dot(c2,x)/np.dot(c3,x))
@@ -316,11 +346,11 @@ class Tables:
         xj = np.empty((len(self.T_points),3))
         yij = np.empty((len(self.T_obs),3))
 
-        for i,o in enumerate(self.T_views):
+        for i,o in enumerate(self.T_views.values()):
             Rktk[i] = o.camera_pose.GetCameraMatrix()
-        for i,o in enumerate(self.T_points):
+        for i,o in enumerate(self.T_points.values()):
             xj[i] = o.point
-        for i,o in enumerate(self.T_obs):
+        for i,o in enumerate(self.T_obs.values()):
             yij[i] = o.image_coordinates
 
         x0 = np.hstack([Rktk.ravel(), xj.ravel()])
@@ -341,9 +371,9 @@ class Tables:
 
         plt.show()
         """
-        n_C = self.T_views.shape[0]
-        n_P = self.T_points.shape[0]
-        new_pose, new_points = fun.reshapeToCamera3DPoints2(result.x, n_C, n_P)
+        n_C = len(self.T_views)
+        n_P = len(self.T_points)
+        new_pose, new_points = fun.reshapeToCamera3DPoints2(self, result.x, n_C, n_P)
         #print(new_pose.shape)
         #print(new_points.shape)
 
@@ -367,15 +397,19 @@ class Tables:
         camera_idx = np.empty(len(self.T_obs))
         point_idx = np.empty(len(self.T_obs))
 
-        for i,o in enumerate(self.T_obs):
+        for i,o in enumerate(self.T_obs.values()):
             camera_idx[i] = o.view_index
             point_idx[i] = o.point_3D_index
 
-
+        print(camera_idx)
+        print(point_idx)
+        print(len(point_idx))
         m = len(self.T_obs) * 2
         n = len(self.T_views) * 12 + len(self.T_points) * 3
         A = lil_matrix((m, n), dtype = 'int')
-
+        print(n)
+        plt.figure()
+        plt.show()
         i = np.arange(len(self.T_obs))
         for s in range(12):
             A[2 * i, camera_idx * 12 + s] = 1
@@ -384,7 +418,7 @@ class Tables:
 
         for s in range(3):
             A[2 * i, len(self.T_views) * 12 + point_idx * 3 + s] = 1
-            A[2 * i + 1, len(self.T_views) * 12 + point_idx* 3 + s] = 1
+            A[2 * i + 1, len(self.T_views) * 12 + point_idx * 3 + s] = 1
 
         A[:,0:12] = 0
         #plt.spy(A)
@@ -394,9 +428,9 @@ class Tables:
         #return J_mask
 
     def updateCameras3Dpoints2(self, new_pose, new_points):
-        for i, o in enumerate(self.T_views):
-            t = new_pose[i,:,3]
-            R = new_pose[i,:3,:3]
-            o.camera_pose = CameraPose(R,t)
-        for i, o in enumerate(self.T_points):
-            o.point = new_points[i]
+        for key in self.T_views:
+            t = new_pose[key][:,3]
+            R = new_pose[key][:3,:3]
+            self.T_views[key].camera_pose = CameraPose(R,t)
+        for key in self.T_points:
+            self.T_points[key].point = new_points[key]
