@@ -52,11 +52,11 @@ Den andra gruppens F
 F = np.array([[1.20899205e-08,  1.87079612e-07, 4.39313278e-04 ], [2.41307322e-07, -8.82954119e-09 , 7.81238182e-03 ], [ 5.75003645e-05 , -7.97164482e-03 , -1.74092676e-01 ]])
 """
 #F, mask = cv.findFundamentalMat(y1,y2,cv.FM_RANSAC  )
-#F = fun.getFFromLabCode(y1.T, y2.T)
+F = fun.getFFromLabCode(y1.T, y2.T)
 
 #np.save("Fmatrix", F)
 print("Initialize SfM pipeline...")
-F = np.load("Fmatrix.npy", allow_pickle=True)
+#F = np.load("Fmatrix.npy", allow_pickle=True)
 
 lab3.plot_eplines(F, y2.T, images[0].shape)
 plt.show()
@@ -116,10 +116,12 @@ for i in range(1,34,1):
     """
         BA: Bundle Adjustment of all images so far
     """
+    """
     preBA = np.zeros([0,3])
 
     for p in T_tables.T_points:
         preBA = np.concatenate((preBA, [p.point]), axis=0)
+    """
     #print("Bundle adjustment...")
     #T_tables.plot()
     T_tables.BundleAdjustment2()
@@ -133,6 +135,7 @@ for i in range(1,34,1):
     #Triangulate x from y1, y2, C1 and C2. Update 3D point in T_points
     #Remove potential outliers from T_points after bundle adjustment
 
+    """
     # Check for large changes in position before and after BA
     dist = np.empty((T_tables.T_points.shape[0]))
     for j,p in enumerate(T_tables.T_points):
@@ -177,6 +180,7 @@ for i in range(1,34,1):
     print(T_tables.T_points.shape[0])
     print(T_tables.T_obs.shape[0])
     """
+    """
         EXT1: Choose new view C
     """
 
@@ -215,7 +219,7 @@ for i in range(1,34,1):
     """
         WASH2: Check elements not in C and remove either 3D points or observation
     """
-T_tables.plot()
+    T_tables.plot()
 """
     After last iteration: Bundle Adjustment if outliers were removed since last BA
 """

@@ -167,7 +167,7 @@ class Tables:
             #Got through all observations seen in last view added
             for v in self.T_views[len(self.T_views)-1].observations_index:
                 match = self.T_obs[v]
-                if np.linalg.norm(match.image_coordinates-y1_hom[i]) < 0.01:
+                if np.linalg.norm(match.image_coordinates-y1_hom[i]) < 0.0001:
                     found = True
                     break
             #There is a corresponding 3D point x in T_points! Add y2, x to D
