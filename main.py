@@ -52,11 +52,11 @@ Den andra gruppens F
 F = np.array([[1.20899205e-08,  1.87079612e-07, 4.39313278e-04 ], [2.41307322e-07, -8.82954119e-09 , 7.81238182e-03 ], [ 5.75003645e-05 , -7.97164482e-03 , -1.74092676e-01 ]])
 """
 #F, mask = cv.findFundamentalMat(y1,y2,cv.FM_RANSAC  )
-F = fun.getFFromLabCode(y1.T, y2.T)
+#F = fun.getFFromLabCode(y1.T, y2.T)
 
 #np.save("Fmatrix", F)
 print("Initialize SfM pipeline...")
-#F = np.load("Fmatrix.npy", allow_pickle=True)
+F = np.load("Fmatrix.npy", allow_pickle=True)
 
 lab3.plot_eplines(F, y2.T, images[0].shape)
 plt.show()
@@ -84,6 +84,9 @@ R, t = fun.relative_camera_pose(E, y1_hom[0,:2].T, y2_hom[0,:2].T) #Inpute is C-
 #Get first two camera poses
 C1 = CameraPose() #No rotation and translation
 C2 = CameraPose(R,t)
+print('second camera t R')
+print(t)
+print(R)
 
 #Add the first two Views to the tables.
 #Index 0 and C1 for image 1 and first camera pose. Same for second image and C2
@@ -134,25 +137,25 @@ for i in range(1,35,1):
     #Get corresponding observations y1 and y2 from T_obs and their camera poses C1 and C2 from T_views.
     #Triangulate x from y1, y2, C1 and C2. Update 3D point in T_points
     #Remove potential outliers from T_points after bundle adjustment
-    delete_key = np.empty((0,1), dtype='int')
-    for key in T_tables.T_points :
-        for k,o in enumerate(T_tables.T_points[key].observations_index) :
-                y = T_tables.T_obs[o]
-                C = T_tables.T_views[y.view_index].camera_pose
-                #x = np.append(T_tables.T_points[key].point[:,np.newaxis], 1)
-                x = T_tables.T_points[key].point
+    # delete_key = np.empty((0,1), dtype='int')
+    # for key in T_tables.T_points :
+    #     for k,o in enumerate(T_tables.T_points[key].observations_index) :
+    #             y = T_tables.T_obs[o]
+    #             C = T_tables.T_views[y.view_index].camera_pose
+    #             #x = np.append(T_tables.T_points[key].point[:,np.newaxis], 1)
+    #             x = T_tables.T_points[key].point
 
-                x_C = (C.R@x)+C.t
-                #print(x_C)
-                #print(x_C)
-                if x_C[-1] < 0:
-                    delete_key = np.append(delete_key, key)
-                #print(x_C)
-                # plt.figure()
-                # plt.show()
-    for n in delete_key :
-        print("Deleting points not visible...")
-        T_tables.deletePoint2(n)
+    #             x_C = (C.R@x)+C.t
+    #             #print(x_C)
+    #             #print(x_C)
+    #             if x_C[-1] < 0:
+    #                 delete_key = np.append(delete_key, key)
+    #             #print(x_C)
+    #             # plt.figure()
+    #             # plt.show()
+    # for n in delete_key :
+    #     print("Deleting points not visible...")
+    #     T_tables.deletePoint2(n)
     
     # # Check for large changes in position before and after BA
     delete_key = np.empty((0,1), dtype='int')

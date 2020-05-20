@@ -73,7 +73,7 @@ def getImages():
     return images
 
 def getCameraMatrices():
-    """
+    
     #Load noisy cameras
     
     cameras = sio.loadmat('imgdata/dino_Ps.mat')
@@ -85,7 +85,7 @@ def getCameraMatrices():
     points = sio.loadmat('BAdino2.mat')
     newPs = points['newPs']
     cameras = np.asarray(newPs.tolist())
-    
+    """
 
     return cameras
 

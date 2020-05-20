@@ -9,6 +9,7 @@ import fun as fun
 from scipy.sparse import lil_matrix
 import lab3 as lab3
 from scipy.spatial.transform import Rotation as R
+import scipy
 
 class Tables:
 
@@ -163,8 +164,33 @@ class Tables:
         consensus_coords = D_imgcoords_hom[inliers[:,0]]
         consensus_x_i = x_i[inliers[:,0]]
 
+        ##check if its right R and t
+        #case1
+        t = t[:,0]
+        print('added camera t R')
+        print(t)
+        print(R)
+        #R = scipy.linalg.inv(R)
+        # #t_inv = -1*t
+        # y1_1 = D_imgcoordsy1[0]
+        # y2_1 = D_imgcoords[0]
+
+        # C1 = CameraPose(R, t)
+        # C2 = CameraPose(R_inv, t)
+
+        # x1 = lab3.triangulate_optimal(last_C.GetCameraMatrix(), C1.GetCameraMatrix(), y1_1, y2_1)
+        # x2 = (C1.R@x1)+C1.t
+        # if x1[-1] > 0 and x2[-1] > 0:
+        #     R = C1.R
+        # #case2
+        # x1 = lab3.triangulate_optimal(last_C.GetCameraMatrix(), C2.GetCameraMatrix(), y1_1, y2_1)
+        # x2 = (C2.R@x1)+C2.t
+        # if x1[-1] > 0 and x2[-1] > 0:
+        #     R = C2.R
+        
+        
         #Set Camera pose C = (R | t) for img2
-        C = CameraPose(R, t[:,0])
+        C = CameraPose(R, t)
 
         #Add new view to T_views
         view_index = self.addView(img_index, C)
