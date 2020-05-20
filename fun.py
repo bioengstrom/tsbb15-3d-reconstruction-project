@@ -8,6 +8,7 @@ import math
 import scipy.io as sio
 from correspondences import Correspondences
 from help_classes import CameraPose, Point_3D, Observation, View
+from scipy.spatial.transform import Rotation as R
 
 def getEFromCameras(C1, C2):
 
@@ -72,18 +73,19 @@ def getImages():
     return images
 
 def getCameraMatrices():
+    """
     #Load noisy cameras
-
+    
     cameras = sio.loadmat('imgdata/dino_Ps.mat')
     cameras = cameras['P']
     cameras = np.asarray(cameras.tolist())
-
+    
     """
     #load cleaned cameras
     points = sio.loadmat('BAdino2.mat')
     newPs = points['newPs']
     cameras = np.asarray(newPs.tolist())
-    """
+    
 
     return cameras
 
@@ -278,15 +280,41 @@ def camera_resectioning(C):
         t = -1*D@t
     return K,R,t
 
-def reshapeToCamera3DPoints2(x0, n_C, n_P):
+def reshapeToCamera3DPoints2(table, x0, n_C, n_P):
     #ratio = int((x0.shape[0]/16)*12)
     #size = int(ratio/(3*4))
+    
+    Rktk = x0[:n_C*7]
+    Rqtk = Rktk[:7*n_C]
+    Rqtk = np.reshape(Rqtk, [n_C, 7])
+    Rq_seq = Rqtk[:,:4]
+    tk = Rqtk[:,4:7]
+    Rq = R.from_quat(Rq_seq)
+   
+    Rk = Rq.as_matrix()
+    Rktk = np.empty((len(Rk),3,4))
+    
+    for i in range(len(Rk)):
+        temp = np.array([tk[i,:]])
+        Rktk[i] = np.concatenate((Rk[i,:,:],temp.T), axis = 1)
+    
+    xj = x0[n_C*7:]
+    
+    """
     Rktk = x0[:n_C*12]
     xj = x0[n_C*12:]
     Rktk = np.reshape(Rktk, [n_C, 3, 4])
+   """
     xj = np.reshape(xj, [n_P, 3])
-    return Rktk, xj
+    
+    Rt = {}
+    x = {}
+    for i,key in enumerate(table.T_points) :
+        x[key] = xj[i]
+    for i,key in enumerate(table.T_views) :
+        Rt[key] = Rktk[i]
 
+    return Rt, x
 def getFFromLabCode(p1, p2):
     """
 
