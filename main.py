@@ -116,10 +116,12 @@ for i in range(1,35,1):
     """
         BA: Bundle Adjustment of all images so far
     """
+    """
     preBA = np.zeros([0,3])
 
     for p in T_tables.T_points.values():
         preBA = np.concatenate((preBA, [p.point]), axis=0)
+    """
     #print("Bundle adjustment...")
     #T_tables.plot()
     T_tables.BundleAdjustment2()
@@ -197,6 +199,7 @@ for i in range(1,35,1):
         print("Deleting points...")
         T_tables.deletePoint2(n)
     
+    """
     """
         EXT1: Choose new view C
     """
