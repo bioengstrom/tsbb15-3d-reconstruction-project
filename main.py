@@ -236,7 +236,7 @@ for i in range(1,35,1):
     """
         WASH2: Check elements not in C and remove either 3D points or observation
     """
-T_tables.plot()
+    T_tables.plot()
 """
     After last iteration: Bundle Adjustment if outliers were removed since last BA
 """
