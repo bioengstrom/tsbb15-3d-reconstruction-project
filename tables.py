@@ -119,7 +119,7 @@ class Tables:
         A_y2 = np.zeros([0,2])
         print("y1 shape add new view")
         print(y1.shape)
-
+        last_C = self.T_views[img_index-1].camera_pose
 
         for i in range(y1.shape[0]):
             found = False
@@ -127,7 +127,7 @@ class Tables:
             #Got through all observations seen in last view added
             for v in self.T_views[len(self.T_views)-1].observations_index:
                 match = self.T_obs[v]
-                if np.linalg.norm(match.image_coordinates-y1_hom[i]) < 0.0001:
+                if np.linalg.norm(match.image_coordinates-y1_hom[i]) < 0.000001:
                     found = True
                     break
             #There is a corresponding 3D point x in T_points! Add y2, x to D
@@ -146,7 +146,10 @@ class Tables:
         print(D_3Dpoints.shape[0])
         #Pnp Algorithm return consensus set C of correspondences that agree with the estimated camera pose
         dist_coeffs = np.zeros((4,1)) # Assuming no lens distortion
-        retval, R, t, inliers = cv.solvePnPRansac(D_3Dpoints[:,:3], D_imgcoords[:,:2], K, dist_coeffs)
+        last_CRod = np.empty((3))
+        cv.Rodrigues(last_C.R, last_CRod)
+        lastCthomo = np.append(last_C.t[:,np.newaxis], 1)
+        retval, R, t, inliers = cv.solvePnPRansac(D_3Dpoints[:,:3], D_imgcoords[:,:2], K, dist_coeffs, rvec = last_CRod, tvec = lastCthomo)
 
         print("Ransac done!")
         #Make the rotation vector 3x3 matrix w open cv rodrigues method
@@ -218,6 +221,9 @@ class Tables:
     def plot(self):
         fig = plt.figure()
         ax = fig.gca(projection='3d')
+        ax.set_xlabel('x')
+        ax.set_ylabel('y')
+        ax.set_zlabel('z')
         ax.set_xlim([-5, 5])
         ax.set_ylim([-5, 5])
         ax.set_zlim([0, 10])
@@ -295,6 +301,7 @@ class Tables:
         #plt.figure()
         #plt.imshow(J_mask)
 
+        """
         plt.figure()
         plt.subplot(311)
         plt.plot(r)
@@ -304,6 +311,7 @@ class Tables:
         
         plt.show()
 
+        """
         n_C = len(self.T_views)
         n_P = len(self.T_points)
         new_pose, new_points = fun.reshapeToCamera3DPoints2(self, result.x, n_C, n_P)
