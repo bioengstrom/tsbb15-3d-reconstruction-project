@@ -17,6 +17,7 @@ import fun as fun
 """
     Load data
 """
+scipy.__version__
 #Get images and camera matrices
 print("Get images, camera matrices and correspondences...")
 images = fun.getImages()
@@ -103,6 +104,7 @@ for i in range(y1.shape[0]):
 
 T_tables.plotProjections(0, K, images[0])
 
+
 """
     Iterate through all images in sequence
 """
@@ -116,12 +118,12 @@ for i in range(1,35,1):
     """
         BA: Bundle Adjustment of all images so far
     """
-    
+
     preBA = np.zeros([0,3])
 
     for p in T_tables.T_points.values():
         preBA = np.concatenate((preBA, [p.point]), axis=0)
-    
+
     #print("Bundle adjustment...")
     #T_tables.plot()
     T_tables.BundleAdjustment2()
@@ -153,21 +155,21 @@ for i in range(1,35,1):
     for n in delete_key :
         print("Deleting points not visible...")
         T_tables.deletePoint2(n)
-    
+
     # # Check for large changes in position before and after BA
     delete_key = np.empty((0,1), dtype='int')
     dist = np.empty((len(T_tables.T_points)))
     for j,key in enumerate(T_tables.T_points):
         dist = np.linalg.norm(T_tables.T_points[key].point - preBA[j])
-    
+
         if dist > 1:
             delete_key = np.append(delete_key, key)
 
     for n in delete_key :
         print("Deleting points BA...")
         T_tables.deletePoint2(n)
-    
-    
+
+
     # Check for large reprojection errors
     delete_key = np.empty((0,1), dtype='int')
     for key in T_tables.T_points :
@@ -198,8 +200,8 @@ for i in range(1,35,1):
     for n in delete_key :
         print("Deleting points...")
         T_tables.deletePoint2(n)
-    
-    
+
+
     """
         EXT1: Choose new view C
     """
@@ -239,7 +241,12 @@ for i in range(1,35,1):
     """
         WASH2: Check elements not in C and remove either 3D points or observation
     """
-    T_tables.plot()
+    #T_tables.plot()
 """
     After last iteration: Bundle Adjustment if outliers were removed since last BA
 """
+T_tables.plot()
+#Save data for evaluation
+R, t = T_tables.getCamerasForEvaluation()
+np.save("R_eval_clean", R)
+np.save("t_eval_clean", t)

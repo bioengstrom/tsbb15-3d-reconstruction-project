@@ -108,7 +108,7 @@ class Tables:
     #coords1 & coords2 are the putative correspondeces
     def addNewView(self, K, img_index, y1_hom, y2_hom, y1, y2):
         images = fun.getImages()
-        
+
         #image_coords, views, points_3D = self.getObsAsArrays()
         #Set D is the set that is containing matches with points already known
         D_3Dpoints = np.zeros([0,3])
@@ -145,9 +145,9 @@ class Tables:
                 A_y1 = np.concatenate((A_y1, [y1[i]]), axis = 0)
                 A_y2 = np.concatenate((A_y2, [y2[i]]), axis = 0)
 
-        lab3.show_corresp(images[img_index-1], images[img_index], D_imgcoordsy1.T, D_imgcoords.T, vertical= False)
-        plt.show()
-        
+        #lab3.show_corresp(images[img_index-1], images[img_index], D_imgcoordsy1.T, D_imgcoords.T, vertical= False)
+        #plt.show()
+
         print("Doing ransac pnp with n many elements:")
         print(D_3Dpoints.shape[0])
         #Pnp Algorithm return consensus set C of correspondences that agree with the estimated camera pose
@@ -224,6 +224,16 @@ class Tables:
             plt.scatter(proj1[0], proj1[1], c= 'r', s = 40)
         plt.show()
 
+    def getCamerasForEvaluation(self):
+        Rs = np.zeros([0,3,3])
+        ts = np.zeros([0,3])
+
+        for v in self.T_views.values():
+            Rs = np.concatenate((Rs, [v.camera_pose.R]), axis=0)
+            ts = np.concatenate((ts, [v.camera_pose.t]), axis=0)
+
+        return Rs, ts
+
     def plot(self):
         fig = plt.figure()
         ax = fig.gca(projection='3d')
@@ -297,7 +307,7 @@ class Tables:
             xj[i] = o.point
         for i,o in enumerate(self.T_obs.values()):
             yij[i] = o.image_coordinates
-        
+
         x0 = np.hstack([Rq.ravel(), xj.ravel()])
         #print(x0.shape)
         r = EpsilonBA(x0, yij[:,0],yij[:,1], self)
@@ -311,10 +321,10 @@ class Tables:
         plt.figure()
         plt.subplot(311)
         plt.plot(r)
-        
+
         plt.subplot(312)
         plt.plot(result.fun)
-        
+
         plt.show()
 
         """
