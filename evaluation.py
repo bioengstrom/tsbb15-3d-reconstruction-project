@@ -24,8 +24,7 @@ t = np.zeros((C.shape[1],3))
 for i in range(C.shape[1]):
     K, R[i,:,:], t[i,:] = fun.camera_resectioning(C[0,i,:,:])
 
-t = t[:35]
-R = R[:35]
+
 R_est = np.load('R_eval_clean.npy')
 t_est = np.load('t_eval_clean.npy')
 
