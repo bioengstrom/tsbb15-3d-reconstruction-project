@@ -291,8 +291,6 @@ def estRigidTransformation(a, b) :
     # t.shape should be (N,3)
     # Compute centroids
     m = a.shape[0]
-    print(a.shape)
-    print(b.shape)
 
     a0 = (1/m) * np.sum(a, axis=0)
     b0 = (1/m) * np.sum(b, axis=0)
@@ -311,19 +309,18 @@ def estRigidTransformation(a, b) :
     #ax.scatter(a0[0], a0[1], a0[2], marker='o', color='black', alpha=1)
     #ax.scatter(b0[0], b0[1], b0[2], marker='o', color='black', alpha=1)
     plt.show()
-    #print(A.shape)
     #print(B.T.
 
-    M = B.T @ A
-    print(M.shape)
+    M = A.T @ B
+
 
     # Determine R: Strict version of OPP, alg 15.1 IREG
     #U, S, V_T = specSVD(M)
     U, S, V_T = np.linalg.svd(M)
-    #V = V_T.T
+    V = V_T.T
 
     det_U = np.linalg.det(U)
-    det_V = np.linalg.det(V_T.T)
+    det_V = np.linalg.det(V)
     print(det_U * det_V)
     tau = np.sign(det_U * det_V)
     print(tau)

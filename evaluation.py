@@ -27,10 +27,6 @@ t_est = np.load('t_eval_clean.npy')
 for i in range(C.shape[1]):
     K, R[i,:,:], t[i,:] = fun.camera_resectioning(C[0,i,:,:])
 
-
-
-
-
 #Get 3D coordinates for the cameras
 coords_est = np.zeros([t.shape[0], 3])
 coords_gt = np.zeros([t.shape[0], 3])
@@ -75,7 +71,7 @@ plt.show()
     EVAL TAJM
 """
 
-M,m = fun.estRigidTransformation(coords_gt, coords_est)
+M,m = fun.estRigidTransformation(coords_est, coords_gt)
 
 t_mapped = np.zeros([t_est.shape[0],3])
 R_mapped = np.zeros([t_est.shape[0],3,3])
@@ -96,17 +92,17 @@ for point in coords_mapped:
     ax.scatter(point[0], point[1], point[2], marker='o', color='blue', alpha=0.2)
 for point in coords_gt:
     ax.scatter(point[0], point[1], point[2], marker='o', color='red', alpha=0.2)
+
 point = coords_gt[4]
 ax.scatter(point[0], point[1], point[2], marker='^', color='red', alpha=1.0)
 point = coords_mapped[4]
 ax.scatter(point[0], point[1], point[2], marker='^', color='blue', alpha=1.0)
+
 plt.show()
 
 
 # individual errors for the camera positions
-err = np.linalg.norm(coords_gt - coords_mapped, axis= 1)
-
-print(coords_gt - coords_mapped)
+err = np.linalg.norm(t-t_mapped, axis= 1)
 
 #individual angular error
 ang_err = np.zeros([R.shape[0]])
