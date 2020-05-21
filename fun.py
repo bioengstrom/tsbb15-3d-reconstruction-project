@@ -57,7 +57,7 @@ def MakeHomogenous(K, coord):
 
 def getImages():
     no_of_images = 36
-    img1 = cv.imread("../images/viff.000.ppm", cv.IMREAD_COLOR)
+    img1 = cv.imread("images/viff.000.ppm", cv.IMREAD_COLOR)
     img1 = np.asarray(img1)
 
 
@@ -69,11 +69,11 @@ def getImages():
             no = '0' + no
         #img1 = np.asarray(cv.cvtColor(images[0], cv.COLOR_BGR2GRAY)) # Grayscale
         #img2 = np.asarray(cv.cvtColor(images[1], cv.COLOR_BGR2GRAY))
-        images[i] = np.asarray(cv.imread("../images/viff.0" + no + ".ppm", cv.IMREAD_COLOR))
+        images[i] = np.asarray(cv.imread("images/viff.0" + no + ".ppm", cv.IMREAD_COLOR))
     return images
 
 def getCameraMatrices():
-    
+    """
     #Load noisy cameras
     
     cameras = sio.loadmat('imgdata/dino_Ps.mat')
@@ -85,7 +85,7 @@ def getCameraMatrices():
     points = sio.loadmat('BAdino2.mat')
     newPs = points['newPs']
     cameras = np.asarray(newPs.tolist())
-    """
+    
 
     return cameras
 
@@ -100,7 +100,7 @@ def getEAndK(C, F):
 
     #Calculate essential matrix E = K.T*F*K
     E = np.matmul(np.matmul(np.transpose(K),F),K)
-    return E, K
+    return E, K,
 
 def reshapeToCamera3DPoints(x0):
     ratio = int((x0.shape[0]/16)*12)
