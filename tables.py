@@ -234,6 +234,45 @@ class Tables:
 
         return Rs, ts
 
+    def getColorFor3DPoint(self, point):
+        color = np.zeros([0,3], dtype = 'float')
+        #Get all colors for the 3D point
+        for o in point.observations_index:
+            color = np.concatenate((color, [self.T_obs[o].color]), axis=0)
+
+        #Take the mean of the colors
+        if len(point.observations_index) != 1:
+            color = np.mean(color, axis=0)
+        return color/255.0
+
+    def getNormalFor3DPoint(self, point):
+        vectorsToCameras = np.zeros([0,3])
+
+        #Get the vectors from the point to the cameras where it is visible
+        for o in point.observations_index:
+            view_index = self.T_obs[o].view_index
+            cameraPosition = self.T_views[view_index].getWorldPosition()
+            vector = cameraPosition - point.point
+            vectorsToCameras = np.concatenate((vectorsToCameras, [vector]), axis=0)
+
+        #Take the median of the colors
+        if len(point.observations_index) != 1:
+            normal = np.average(vectorsToCameras, axis=0)
+
+        return normal
+
+    def get3DPointsColorsAndNormals(self):
+        points = np.zeros([0,3])
+        colors = np.zeros([0,3])
+        normals = np.zeros([0,3])
+
+        for p in self.T_points.values():
+            points = np.concatenate((points, [p.point]), axis=0)
+            colors = np.concatenate((colors, [self.getColorFor3DPoint(p)]), axis=0)
+            normals = np.concatenate((normals, [self.getNormalFor3DPoint(p)]), axis=0)
+
+        return points, colors, normals
+
     def plot(self):
         fig = plt.figure()
         ax = fig.gca(projection='3d')

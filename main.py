@@ -111,6 +111,9 @@ T_tables.plotProjections(0, K, images[0])
 # Array for re-projection errors. (36, number of points)
 #proj_err = np.empty(( ,images.shape[0]))
 #print(proj_err.shape)
+#Save data for visualization
+vis_data = T_tables.get3DPointsColorsAndNormals()
+np.save("DinoVisalizationData_avgnormals", vis_data)
 
 #for i in range(images.shape[0]-1):
 for i in range(1,35,1):
