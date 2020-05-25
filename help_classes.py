@@ -39,6 +39,7 @@ class Observation:
         self.image_coordinates = image_coordinates
         self.view_index = view_index
         self.point_3D_index = point_3D_index
+        self.color = color
 
     def __str__(self):
         the_print = "OBSERVATION: "
