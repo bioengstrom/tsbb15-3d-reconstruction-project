@@ -59,6 +59,9 @@ class View:
         #self.observations_index = np.array([0], dtype = 'int')
         self.observations_index = np.zeros([0], dtype = 'int')
 
+    def getWorldPosition(self):
+        return -1.0*(self.camera_pose.R.T @ self.camera_pose.t)
+
     def __str__(self):
         the_print = "VIEW: "
         the_print += "Image index: "

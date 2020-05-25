@@ -289,7 +289,7 @@ class Tables:
         for i in self.T_points.values():
             ax.scatter(i.point[0], i.point[1], i.point[2], marker='o', color='orange')
         for i in self.T_views.values():
-            position = -1.0*(i.camera_pose.R.T @ i.camera_pose.t)
+            position = i.getWorldPosition()
             ax.scatter(position[0], position[1], position[2], marker='^', color='black')
 
         plt.show()
