@@ -9,6 +9,7 @@ import fun as fun
 from scipy.sparse import lil_matrix
 import lab3 as lab3
 from scipy.spatial.transform import Rotation as R
+import scipy
 
 class Tables:
 
@@ -133,7 +134,7 @@ class Tables:
             #Got through all observations seen in last view added
             for v in self.T_views[len(self.T_views)-1].observations_index:
                 match = self.T_obs[v]
-                if np.linalg.norm(match.image_coordinates-y1_hom[i]) < 0.000001:
+                if np.linalg.norm(match.image_coordinates-y1_hom[i]) < 0.0001:
                     found = True
                     break
             #There is a corresponding 3D point x in T_points! Add y2, x to D
@@ -159,16 +160,49 @@ class Tables:
         last_CRod = np.empty((3))
         cv.Rodrigues(last_C.R, last_CRod)
         lastCthomo = np.append(last_C.t[:,np.newaxis], 1)
-        retval, R, t, inliers = cv.solvePnPRansac(D_3Dpoints[:,:3], D_imgcoords[:,:2], K, dist_coeffs, rvec = last_CRod, tvec = lastCthomo)
+        #retval, R, t, inliers = cv.solvePnPRansac(D_3Dpoints[:,:3], D_imgcoords[:,:2], K, dist_coeffs)
+        #retval, R, t, = cv.solvePnP(D_3Dpoints[:,:3], D_imgcoords[:,:2], K, dist_coeffs)
+        #, rvec = last_CRod, tvec = lastCthomo, useExtrinsicGuess=True
+        retval, R, t, inliers = cv.solvePnPRansac(D_3Dpoints[:,:3], D_imgcoords[:,:2], K, dist_coeffs)
 
         print("Ransac done!")
         #Make the rotation vector 3x3 matrix w open cv rodrigues method
         R, jacobian = cv.Rodrigues(R, R)
+
+        #consensus_coords = D_imgcoords_hom
+        #consensus_x_i = x_i
         consensus_coords = D_imgcoords_hom[inliers[:,0]]
         consensus_x_i = x_i[inliers[:,0]]
 
+        ##check if its right R and t
+        #case1
+        t = t[:,0]
+        print('added camera t R')
+        print(t)
+        print(R)
+        #R = R.T;  #// rotation of inverse
+        #t = (-1*R)@t; #// translation of inverse
+        #R = scipy.linalg.inv(R)
+        #t = -1*t
+        # y1_1 = D_imgcoordsy1[0]
+        # y2_1 = D_imgcoords[0]
+
+        # C1 = CameraPose(R, t)
+        # C2 = CameraPose(R_inv, t)
+
+        # x1 = lab3.triangulate_optimal(last_C.GetCameraMatrix(), C1.GetCameraMatrix(), y1_1, y2_1)
+        # x2 = (C1.R@x1)+C1.t
+        # if x1[-1] > 0 and x2[-1] > 0:
+        #     R = C1.R
+        # #case2
+        # x1 = lab3.triangulate_optimal(last_C.GetCameraMatrix(), C2.GetCameraMatrix(), y1_1, y2_1)
+        # x2 = (C2.R@x1)+C2.t
+        # if x1[-1] > 0 and x2[-1] > 0:
+        #     R = C2.R
+        
+        
         #Set Camera pose C = (R | t) for img2
-        C = CameraPose(R, t[:,0])
+        C = CameraPose(R, t)
 
         #Add new view to T_views
         view_index = self.addView(img_index, C)
@@ -292,6 +326,10 @@ class Tables:
             position = i.getWorldPosition()
             ax.scatter(position[0], position[1], position[2], marker='^', color='black')
 
+            normal = np.array([0,0,1])
+            n = (i.camera_pose.R@normal) + i.camera_pose.t
+            ax.quiver(position[0], position[1], position[2], n[0], n[1], n[2], length=1, normalize=True)
+
         plt.show()
 
     def BundleAdjustment2(self):
@@ -369,8 +407,8 @@ class Tables:
         plt.plot(result.fun)
 
         plt.show()
-
         """
+        
         n_C = len(self.T_views)
         n_P = len(self.T_points)
         new_pose, new_points = fun.reshapeToCamera3DPoints2(self, result.x, n_C, n_P)
