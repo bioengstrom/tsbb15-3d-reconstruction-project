@@ -74,6 +74,7 @@ T_tables = Tables()
 
 #Vårt K
 E, K = fun.getEAndK(C, F)
+T_tables.K = K
 
 #Make the image coordinates homogenous
 y1_hom = fun.MakeHomogenous(K, y1)

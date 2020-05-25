@@ -19,6 +19,8 @@ class Tables:
         self.o_key = 0
         self.v_key = 0
         self.p_key = 0
+        self.K = np.zeros([3,3])
+        self.images = fun.getImages()
         #self.T_obs = np.array([], dtype = 'object')
         #self.T_views = np.array([], dtype = 'object')
         #self.T_points = np.array([], dtype = 'object')
@@ -38,7 +40,9 @@ class Tables:
         return self.p_key-1 #Return index to added item
 
     def addObs(self,coord, view_key, point_key):
-        self.T_obs[self.o_key] = Observation(coord, view_key, point_key)
+        not_hom_coords = self.K @ coord
+        color = self.images[view_key, int(not_hom_coords[1]),int(not_hom_coords[0])]
+        self.T_obs[self.o_key] = Observation(coord, view_key, point_key, color)
         self.o_key = self.o_key + 1
         self.T_views[view_key].observations_index = np.concatenate((self.T_views[view_key].observations_index, [self.o_key - 1]), axis = 0)
         self.T_points[point_key].observations_index = np.concatenate((self.T_points[point_key].observations_index, [self.o_key - 1]), axis = 0)

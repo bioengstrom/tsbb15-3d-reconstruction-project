@@ -35,7 +35,7 @@ class Point_3D:
         return the_print
 
 class Observation:
-    def __init__(self, image_coordinates, view_index, point_3D_index):
+    def __init__(self, image_coordinates, view_index, point_3D_index, color):
         self.image_coordinates = image_coordinates
         self.view_index = view_index
         self.point_3D_index = point_3D_index
