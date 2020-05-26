@@ -88,6 +88,9 @@ for i in range(t.shape[0]):
 #Plot the cameras
 fig = plt.figure()
 ax = fig.add_subplot(111, projection='3d')
+ax.set_xlim([-1,1])
+ax.set_ylim([-1,1])
+ax.set_zlim([-1,1])
 for point in coords_mapped:
     ax.scatter(point[0], point[1], point[2], marker='o', color='blue', alpha=0.2)
 for point in coords_gt:

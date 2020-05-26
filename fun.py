@@ -57,7 +57,7 @@ def MakeHomogenous(K, coord):
 
 def getImages():
     no_of_images = 36
-    img1 = cv.imread("../images/viff.000.ppm", cv.IMREAD_COLOR)
+    img1 = cv.imread("images/viff.000.ppm", cv.IMREAD_COLOR)
     img1 = np.asarray(img1)
 
 
@@ -67,9 +67,8 @@ def getImages():
         no = str(i)
         if i < 10:
             no = '0' + no
-        #img1 = np.asarray(cv.cvtColor(images[0], cv.COLOR_BGR2GRAY)) # Grayscale
-        #img2 = np.asarray(cv.cvtColor(images[1], cv.COLOR_BGR2GRAY))
-        images[i] = np.asarray(cv.imread("../images/viff.0" + no + ".ppm", cv.IMREAD_COLOR))
+
+        images[i] = np.asarray(cv.imread("images/viff.0" + no + ".ppm", cv.IMREAD_COLOR))
     return images
 
 def getCameraMatrices():
@@ -102,6 +101,7 @@ def getEAndK(C, F):
     E = np.matmul(np.matmul(np.transpose(K),F),K)
     return E, K,
 
+"""
 def reshapeToCamera3DPoints(x0):
     ratio = int((x0.shape[0]/16)*12)
     size = int(ratio/(3*4))
@@ -110,6 +110,7 @@ def reshapeToCamera3DPoints(x0):
     Rktk = np.reshape(Rktk, [size, 3, 4])
     xj = np.reshape(xj, [size, 4])
     return Rktk, xj
+"""
 
 def matchingMatrix(roi1, roi2) :
     matrix = np.empty((len(roi1),len(roi2)))
@@ -117,66 +118,7 @@ def matchingMatrix(roi1, roi2) :
     for i in range(len(roi1)) :
         for j in range(len(roi2)) :
             matrix[i,j] = np.linalg.norm(roi1[i] - roi2[j])
-            #print(matrix[i,j])
     return matrix
-
-def f_matrix(coords1_t, coords2_t) :
-
-
-    """
-    plt.imshow(img1)
-    plt.scatter(coords1[0], coords1[1])
-    plt.show()
-    """
-    # harris_1 = lab3.harris(img1, 7, 3)
-    # harris_2 = lab3.harris(img2, 7, 3)
-    #
-    # harris_1 = lab3.non_max_suppression(harris_1, 9)
-    # harris_2 = lab3.non_max_suppression(harris_2, 9)
-    # coords1 = np.vstack(np.nonzero(harris_1 > 0.001*np.max(harris_1)))
-    # coords2 = np.vstack(np.nonzero(harris_2 > 0.001*np.max(harris_2)))
-    # coords1 = np.flipud(coords1)
-    # coords2 = np.flipud(coords2)
-    #
-    # roi1 = lab3.cut_out_rois(img1, coords1[0], coords1[1], 7)
-    # roi2 = lab3.cut_out_rois(img2, coords2[0], coords2[1], 7)
-    # roi1 = np.asarray(roi1); roi2 = np.asarray(roi2)
-    #
-    # matrix = matchingMatrix(roi1, roi2)
-    # vals, ri, ci = lab3.joint_min(matrix)
-    #
-    # coords1 = coords1[:,ri]
-    # coords2 = coords2[:,ci]
-    #
-    # coords1_t = coords1.T
-    # coords2_t = coords2.T
-
-    F, mask = cv.findFundamentalMat(coords1_t, coords2_t, cv.FM_8POINT)
-
-    # We select only inlier points
-    coords1_t = coords1_t[mask.ravel()==1]
-    coords2_t = coords2_t[mask.ravel()==1]
-
-    inl_coords1 = coords1_t.T
-    inl_coords2 = coords2_t.T
-    """
-    lab3.show_corresp(img1, img2, inl_coords1, inl_coords2)
-    plt.show()
-    """
-    # camera 1 and 2
-    C1, C2 = lab3.fmatrix_cameras(F)
-    X = np.empty((3,inl_coords1.shape[1]))
-    for i in range(inl_coords1.shape[1]) :
-        X[:,i] = lab3.triangulate_optimal(C1, C2, inl_coords1[:,i], inl_coords2[:,i])
-
-    # minimize using least_squares
-    params = np.hstack((C1.ravel(), X.T.ravel()))
-    solution = least_squares(lab3.fmatrix_residuals_gs, params, args=(inl_coords1,inl_coords2))
-
-    C1 = solution.x[:12].reshape(3,4)
-    F_gold = lab3.fmatrix_from_cameras(C1, C2)
-
-    return F, inl_coords1, inl_coords2
 
 #input n x 3 matrix
 def specRQ(M):
@@ -219,13 +161,11 @@ def relative_camera_pose(E, y1, y2):
     W[1,0] = -1
     W[2,2] = 1
 
-
     VWU_T = V@W@np.transpose(U)
     VW_TU_T = V@np.transpose(W)@np.transpose(U)
 
     v3_pos = V[:,-1]
     v3_neg = V[:,-1]*-1
-
 
     #C0 [I | 0]
     identity = CameraPose()
@@ -280,9 +220,7 @@ def camera_resectioning(C):
         t = -1*D@t
     return K,R,t
 
-def reshapeToCamera3DPoints2(table, x0, n_C, n_P):
-    #ratio = int((x0.shape[0]/16)*12)
-    #size = int(ratio/(3*4))
+def reshapeToCamera3DPoints(table, x0, n_C, n_P):
 
     Rktk = x0[:n_C*7]
     Rqtk = Rktk[:7*n_C]
@@ -319,9 +257,7 @@ def reshapeToCamera3DPoints2(table, x0, n_C, n_P):
 
 def getFFromLabCode(p1, p2):
     """
-
         RANSAC
-
     """
 
     F_RANSAC = None
@@ -345,7 +281,6 @@ def getFFromLabCode(p1, p2):
         d = np.max(np.abs(d), axis=0)
         S = np.flatnonzero(d < 1.5)
 
-
         if len(S) > len(S_RANSAC):
             S_RANSAC = S
             F_RANSAC = F
@@ -355,29 +290,18 @@ def getFFromLabCode(p1, p2):
                 S_RANSAC = S
                 F_RANSAC = F
                 d_RANSAC = np.std(d)
-    """
-    plt.figure(0)
-    lab3.plot_eplines(F_RANSAC, p2, img[0].shape)
-    plt.figure(1)
-    lab3.plot_eplines(F_RANSAC.T, p1, img[1].shape)
-    plt.show()
-    """
+
     """
 
      Gold standard algorithm
 
     """
-
-    #F_guess = lab3.fmatrix_stls(p1,p2)
     F_guess = F_RANSAC
     C1, C2 = lab3.fmatrix_cameras(F_guess)
     X = np.zeros([3, p1.shape[1]])
     inliers_feature_1 = p1[:,S_RANSAC]
     inliers_feature_2 = p2[:,S_RANSAC]
-    """
-    for i in range(p1.shape[1]):
-    	X[:, i] = lab3.triangulate_linear(C1, C2, inliers_feature_1[:,i], inliers_feature_2[:,i])
-    """
+
     X = np.vstack([lab3.triangulate_optimal(C1, C2, x1, x2) for x1, x2 in zip(inliers_feature_1.T, inliers_feature_2.T)])
     X = X.T
 
@@ -413,42 +337,22 @@ def estRigidTransformation(a, b) :
     #Plot
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
-    #ax.scatter(a[:,0], a[:,1], a[:,2], marker='o', color='blue', alpha=0.2)
-    #ax.scatter(b[:,0], b[:,1], b[:,2], marker='o', color='red', alpha=0.2)
     ax.scatter(A[:,0], A[:,1], A[:,2], marker='^', color='red', alpha=0.2)
     ax.scatter(B[:,0], B[:,1], B[:,2], marker='^', color='blue', alpha=0.2)
-    #ax.scatter(a0[0], a0[1], a0[2], marker='o', color='black', alpha=1)
-    #ax.scatter(b0[0], b0[1], b0[2], marker='o', color='black', alpha=1)
     plt.show()
-    #print(B.T.
 
     M = A.T @ B
 
-
-    # Determine R: Strict version of OPP, alg 15.1 IREG
-    #U, S, V_T = specSVD(M)
+    # Determine R: SOPP, special orthogonal Procrustes problem, alg 15.2 IREG
     U, S, V_T = np.linalg.svd(M)
     V = V_T.T
 
     det_U = np.linalg.det(U)
     det_V = np.linalg.det(V)
-    print(det_U * det_V)
     tau = np.sign(det_U * det_V)
-    print(tau)
     mat = np.eye(3)
     mat[-1,-1] = tau
-    print(mat)
     R = V_T.T @ (mat @ U.T)
-    #print(mat)
-    #V = V_T.T
-
-    #R = V @ U.T # Rotation matrix
-    #R = V_T.T @ (mat @ U.T)
-
-    #R = V @ U.T # Rotation matrix
-    #print("Determinant, should be 1")
-    #print(np.linalg.det(R))
-    #np.linalg.inv(R)
     t = b0 - (R@a0) # Translation vector
 
     return R,t
